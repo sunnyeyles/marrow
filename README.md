@@ -98,7 +98,7 @@ The guard is a fast path against mistakes, not a sandbox. The real gates run out
 | Path | What |
 | --- | --- |
 | `skills/marrow/SKILL.md` | the `/marrow` command |
-| `agents/` | spec critic, planner, plan critic, test writer, implementer, judge, three reviewers, skeptic, git-sync, runner |
+| `agents/` | spec critic, planner, plan critic, test writer, implementer, judge, three reviewers, skeptic, git-sync, runner; the Spec and Standards reviewers are adapted from mattpocock's `code-review` skill |
 | `workflows/plan.js`, `build.js`, `review.js` | the Workflow scripts |
 | `CLOUD.md` | what the cloud session does |
 | `templates/spec.md` | the spec skeleton |
