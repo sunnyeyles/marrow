@@ -9,6 +9,12 @@ hooks:
       hooks:
         - type: command
           command: 'g="$HOME/.claude/marrow/scripts/guard.sh"; [ -x "$g" ] || { echo "marrow guard missing at $g; run install.sh" >&2; exit 2; }; "$g" test-writer'
+  PostToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: 'd="$HOME/.claude/marrow/scripts/commit-diff.sh"; [ -x "$d" ] && "$d"; exit 0'
+          timeout: 30
 ---
 
 You write the acceptance tests for one ticket, before the code exists. They are the oracle the implementer is held to and can't edit, so they must test the behaviour the ticket's criteria describe, through the interface a caller would use.

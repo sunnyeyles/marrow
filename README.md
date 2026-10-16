@@ -93,6 +93,10 @@ Optional and committed: `.marrow/checks`, the repo's check commands, one `name: 
 
 The guard is a fast path against mistakes, not a sandbox. The real gates run outside the agents: `verify-ticket.sh` after every attempt, the checks, and `ledger.sh`, which reruns every ticket's acceptance tests at the end and marks a criterion `tampered` if its test files changed after they were locked. `scripts/test-guard.sh` holds the guard's regression tests.
 
+## Commit diffs in cmux
+
+When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit the test writer or implementer makes opens in `cmux diff`, titled with its short SHA and subject. The first opens a new "Commit diffs" workspace in the sidebar; each later one is a new tab in it. Close the workspace and the next commit starts a fresh one. `scripts/commit-diff.sh` is a PostToolUse hook on those two agents. Outside cmux, including cloud sessions, it does nothing. `scripts/test-commit-diff.sh` tests it against a fake `cmux`.
+
 ## Layout
 
 | Path | What |
@@ -102,7 +106,7 @@ The guard is a fast path against mistakes, not a sandbox. The real gates run out
 | `workflows/plan.js`, `build.js`, `review.js` | the Workflow scripts |
 | `CLOUD.md` | what the cloud session does |
 | `templates/spec.md` | the spec skeleton |
-| `scripts/` | `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard` |
+| `scripts/` | `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff` |
 | `skills/codebase-design/` | mattpocock's deep-module skill (MIT), preloaded by the planner, implementer and Standards reviewer |
 | `lessons.md` | lessons from `/marrow retro`, read by every agent |
 | `docs/research/` | the research behind the design |

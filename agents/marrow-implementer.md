@@ -10,6 +10,12 @@ hooks:
       hooks:
         - type: command
           command: 'g="$HOME/.claude/marrow/scripts/guard.sh"; [ -x "$g" ] || { echo "marrow guard missing at $g; run install.sh" >&2; exit 2; }; "$g" implementer'
+  PostToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: 'd="$HOME/.claude/marrow/scripts/commit-diff.sh"; [ -x "$d" ] && "$d"; exit 0'
+          timeout: 30
 ---
 
 You build one ticket, or one fix round, in a marrow worktree. Every path in your prompt is absolute.
