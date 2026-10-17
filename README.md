@@ -29,7 +29,7 @@ A software factory for Claude Code. You talk through a feature, approve a spec a
  │   test writer → red check (tests must fail) → lock tests                   │
  │   implementer (hard tickets: two attempts + judge) → green check           │
  │   merge into marrow/<feature>; integration checks between waves            │
- │ checks ∥ standards, spec, bugs reviewers → skeptic → up to 2 fix rounds    │
+ │ checks ∥ standards, spec, bugs, ui reviewers → skeptic → 2 fix rounds max  │
  │ merge in origin/<base> → acceptance ledger → push marrow/<feature> → PR    │
  │ report pushed to marrow-run/<feature>                                      │
  └────────────────────────────────────────────────────────────────────────────┘
@@ -125,11 +125,12 @@ When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit
 | Path | What |
 | --- | --- |
 | `skills/marrow/SKILL.md` | the `/marrow` command |
-| `agents/` | spec critic, planner, plan critic, test writer, implementer, judge, three reviewers, skeptic, git-sync, runner; the Spec and Standards reviewers are adapted from mattpocock's `code-review` skill |
+| `agents/` | spec critic, planner, plan critic, test writer, implementer, judge, four reviewers, skeptic, git-sync, runner; the Spec and Standards reviewers are adapted from mattpocock's `code-review` skill; the UI reviewer runs only when the diff touches UI files (`ui-files.sh`) |
 | `workflows/plan.js`, `build.js`, `review.js` | the Workflow scripts |
 | `CLOUD.md` | what the cloud session does |
 | `templates/spec.md`, `notes.md` | the spec and repo-notes skeletons |
-| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane` |
+| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane`, `ui-files`, `test-ui-files` |
+| `references/vercel-react/` | Vercel's React and Next.js performance rules (MIT), copied in; the UI reviewer carries their index and reads a rule before citing it. `SOURCE.md` says how to update them |
 | `skills/codebase-design/` | mattpocock's deep-module skill (MIT), preloaded by the planner, implementer and Standards reviewer |
 | `lessons.md` | lessons from `/marrow retro` that hold in any repo, read by every agent |
 | `docs/research/` | the research behind the design |

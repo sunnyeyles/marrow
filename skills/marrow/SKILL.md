@@ -209,8 +209,8 @@ Reviews one branch, read-only. Nothing is pushed or opened.
 1. A spec path, if given, must be absolute and exist. With none, the Spec reviewer is skipped.
 2. `git -C "$REPO" fetch origin --prune --quiet`. Use the local branch if it exists, else `origin/<branch>`; record `HEAD_SHA`.
 3. Slug: the branch with every character outside `A-Za-z0-9._-` replaced by `-`. Make or reuse two detached worktrees at `HEAD_SHA`, `$REPO/.claude/worktrees/marrow-review-<slug>` (read by reviewers) and `marrow-checks-<slug>` (builds and tests), each with `"$MARROW/scripts/lane.sh" detach "$REPO" <path> "$HEAD_SHA"`. It refuses a dirty one; stop then.
-4. `BASE="$(git -C <review worktree> merge-base "origin/$BASE_BRANCH" HEAD)"`. An empty diff stops here.
-5. Start the run folder, `RDIR="$("$MARROW/scripts/run-dir.sh" review "$REPO" "<branch>")"`, then the workflow: `scriptPath` `$MARROW/workflows/review.js`, `args` `{ "repoPath", "branch", "worktree", "checksWorktree", "base", "head", "baseBranch", "specPath" (or null), "marrowDir" }`.
+4. `BASE="$(git -C <review worktree> merge-base "origin/$BASE_BRANCH" HEAD)"`. An empty diff stops here. List its UI files with `"$MARROW/scripts/ui-files.sh" <review worktree> "$BASE" "$HEAD_SHA"`; with none, the UI reviewer is skipped.
+5. Start the run folder, `RDIR="$("$MARROW/scripts/run-dir.sh" review "$REPO" "<branch>")"`, then the workflow: `scriptPath` `$MARROW/workflows/review.js`, `args` `{ "repoPath", "branch", "worktree", "checksWorktree", "base", "head", "baseBranch", "specPath" (or null), "marrowDir", "uiFiles" (its `files` array) }`.
 6. Write `markdown` to `$RDIR/report.md` (first line `Reviewed <branch> <date>, run <runId>.`) and `agentLogMarkdown` beside it; append `checks.failures` with `cat` if set. Tell the user: report path, checks, open findings by severity with the high ones named, incomplete reviewers.
 
 ## `retro <feature>`

@@ -67,7 +67,7 @@ git -C "$REPO" worktree add -q -b "$RUN" "$WT" "origin/$BASE"
 
 # marrow itself, with hook paths pointing into the clone.
 mkdir -p "$WT/.claude/marrow" "$WT/.claude/agents" "$WT/.claude/skills" "$WT/$REL"
-cp -R "$SRC/scripts" "$SRC/workflows" "$SRC/CLOUD.md" "$SRC/lessons.md" "$WT/.claude/marrow/"
+cp -R "$SRC/scripts" "$SRC/workflows" "$SRC/references" "$SRC/CLOUD.md" "$SRC/lessons.md" "$WT/.claude/marrow/"
 for a in "$SRC"/agents/*.md; do
   sed 's#\$HOME/\.claude/marrow#$CLAUDE_PROJECT_DIR/.claude/marrow#g' "$a" >"$WT/.claude/agents/$(basename "$a")"
 done

@@ -4,12 +4,12 @@ export const meta = {
   whenToUse: 'Started by /marrow review with absolute paths in args; not for direct use',
   phases: [
     { title: 'Checks', detail: 'marrow-runner runs checks.sh in the background, in its own worktree' },
-    { title: 'Review', detail: 'standards, bugs, plus spec when a spec is given' },
+    { title: 'Review', detail: 'standards, bugs, plus spec when a spec is given and ui when the diff touches UI files' },
     { title: 'Skeptic', detail: 'refute findings only with cited code' },
   ],
 }
 
-// args: { repoPath, branch, worktree, checksWorktree, base, head, baseBranch, specPath (absolute or null), marrowDir }
+// args: { repoPath, branch, worktree, checksWorktree, base, head, baseBranch, specPath (absolute or null), marrowDir, uiFiles (ui-files.sh's list) }
 const A = args || {}
 for (const k of ['repoPath', 'branch', 'worktree', 'checksWorktree', 'base', 'head', 'marrowDir']) {
   if (!A[k] || typeof A[k] !== 'string') throw new Error(`marrow-review: missing args.${k}`)
@@ -19,7 +19,9 @@ for (const k of ['repoPath', 'worktree', 'checksWorktree', 'marrowDir']) {
 }
 // Builds rewrite tracked files, so checks never share the worktree the reviewers read.
 if (A.checksWorktree === A.worktree) throw new Error('marrow-review: args.checksWorktree must differ from args.worktree')
+if (!Array.isArray(A.uiFiles)) throw new Error('marrow-review: args.uiFiles must be an array (pass JSON, not a string)')
 const SPEC = A.specPath || null
+const UI_FILES = A.uiFiles
 const SCRIPTS = `${A.marrowDir}/scripts`
 const BASE_BRANCH = A.baseBranch || 'main'
 
@@ -149,11 +151,13 @@ const REVIEWERS = {
   standards: { agentType: 'marrow-review-standards', heading: 'Standards' },
   spec: { agentType: 'marrow-review-spec', heading: 'Spec' },
   bugs: { agentType: 'marrow-review-bugs', heading: 'Bugs and security' },
+  ui: { agentType: 'marrow-review-ui', heading: 'UI' },
 }
 
 function reviewerPrompt(name) {
   const lines = [context, '']
   if (name === 'spec') lines.push(`Review the diff against the spec at ${SPEC}, and the tickets beside it.`)
+  if (name === 'ui') lines.push(`UI files changed: ${UI_FILES.join(', ')}`)
   lines.push('Return every finding through the schema. An empty findings list is a fine answer when there is nothing.')
   return lines.join('\n')
 }
@@ -163,6 +167,8 @@ async function runReviewers() {
   const skipped = []
   if (SPEC) names.push('spec')
   else skipped.push({ name: 'spec', why: 'no spec path given' })
+  if (UI_FILES.length) names.push('ui')
+  else skipped.push({ name: 'ui', why: 'the diff touches no UI files' })
   const results = await parallel(names.map(n => () =>
     logged(reviewerPrompt(n), {
       agentType: REVIEWERS[n].agentType, schema: FINDINGS_SCHEMA, phase: 'Review', label: n,

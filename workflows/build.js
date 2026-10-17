@@ -7,7 +7,7 @@ export const meta = {
     { title: 'Tests', detail: 'marrow-test-writer writes each ticket\'s acceptance tests; they must fail first' },
     { title: 'Implement', detail: 'marrow-implementer makes the locked tests pass inside owned paths; hard tickets get two attempts and a judge' },
     { title: 'Merge', detail: 'each green ticket merges into the integration branch; conflicts go to marrow-git-sync' },
-    { title: 'Review', detail: 'checks, then standards (not with lite), spec and bugs reviewers, then the skeptic' },
+    { title: 'Review', detail: 'checks, then standards (not with lite), spec, bugs and ui (when the diff touches UI files) reviewers, then the skeptic' },
     { title: 'Fix', detail: 'up to 2 rounds (1 with lite): fixes, checks, bugs on the fix diff, skeptic' },
     { title: 'Finalize', detail: 'acceptance ledger, rebase on the default branch, push marrow/<feature>, PR body' },
   ],
@@ -428,7 +428,9 @@ const REVIEWERS = {
   standards: { agentType: 'marrow-review-standards', heading: 'Standards' },
   spec: { agentType: 'marrow-review-spec', heading: 'Spec' },
   bugs: { agentType: 'marrow-review-bugs', heading: 'Bugs and security' },
+  ui: { agentType: 'marrow-review-ui', heading: 'UI' },
 }
+let uiNote = ''
 function reviewerContext(base, head) {
   return [ctx(R.worktree, [`Branch: ${R.branch}`, `Base (the merge-base with origin/${BASE_BRANCH}): ${base}`, `Head: ${head}`,
     `Diff: git -C ${R.worktree} diff ${base}...${head}`, `Commits: git -C ${R.worktree} log --oneline ${base}..${head}`,
@@ -439,7 +441,7 @@ function reviewerContext(base, head) {
 const roundNote = p => p.replace(/^fix(\d+)$/, 'fix $1')
 async function runReviewers(base, head, names, idPrefix, extra, phase = 'Review') {
   const results = await parallel(names.map(n => () => step(
-    [reviewerContext(base, head), '', n === 'spec' ? 'Judge only the merged tickets\' share of the spec; tickets not built are reported separately.' : '', extra || '',
+    [reviewerContext(base, head), '', n === 'spec' ? 'Judge only the merged tickets\' share of the spec; tickets not built are reported separately.' : '', n === 'ui' ? uiNote : '', extra || '',
       'Return every finding through the schema. An empty list is a fine answer.'].filter(Boolean).join('\n'),
     { agentType: REVIEWERS[n].agentType, schema: FINDINGS_SCHEMA, phase, label: `${n}${idPrefix ? ` (${roundNote(idPrefix)})` : ''}` },
     { outcome: r => `${(r.findings || []).length} finding(s)${r.incomplete ? ', incomplete' : ''}` })))
@@ -489,6 +491,15 @@ const headOf = async label => {
 async function reviewAndFix() {
   res.head = await headOf('integration head')
   const names = A.lite ? ['spec', 'bugs'] : ['standards', 'spec', 'bugs']
+  const skipped = A.lite ? ['standards (lite)'] : []
+  // A failed listing still runs the UI reviewer: never skip a review on missing data.
+  const ui = await sh(`"${S}/ui-files.sh" ${q(R.worktree)} ${q(res.base)} ${q(res.head)}`, 'ui files', 'Review')
+  const uiFiles = ui.ok === true ? ui.files || [] : null
+  if (uiFiles && !uiFiles.length) skipped.push('ui (no UI files)')
+  else {
+    names.push('ui')
+    uiNote = uiFiles ? `UI files changed: ${uiFiles.join(', ')}` : `Listing the UI files failed (${ui.error || `exit ${ui.exit_code}`}); find them in the diff.`
+  }
   const [c1, review] = await parallel([
     () => runChecks(R.worktree, 'checks', 'Review'),
     async () => {
@@ -499,7 +510,7 @@ async function reviewAndFix() {
   ])
   let checks = c1 || { ok: false, error: 'the checks runner failed' }
   const rv = review || { by: {}, open: [], refuted: [] }
-  res.reviewers = { ran: names, skipped: A.lite ? ['standards (lite)'] : [], incomplete: Object.entries(rv.by).filter(([, r]) => r.incomplete).map(([n, r]) => `${n}: ${r.incomplete_reason || 'no reason'}`) }
+  res.reviewers = { ran: names, skipped, incomplete: Object.entries(rv.by).filter(([, r]) => r.incomplete).map(([n, r]) => `${n}: ${r.incomplete_reason || 'no reason'}`) }
   let open = rv.open
   res.refuted.push(...rv.refuted)
   log(`review: checks ${checksLine(checks)}; ${open.length} open (${highCount(open)} high), ${rv.refuted.length} refuted`)
