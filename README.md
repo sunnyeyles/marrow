@@ -2,6 +2,8 @@
 
 A software factory for Claude Code. You talk through a feature, approve a spec and a plan, and marrow builds it unattended in a Claude Code cloud session. It writes tests first, keeps them locked, checks every ticket outside the agent that did it, and reviews the result adversarially. You approve the PR at the end.
 
+New to marrow? Start with the [user guide](docs/guide.md).
+
 ```
 /marrow setup                walk through fitting marrow to this repo: checks, tests, conventions
 /marrow new <feature>        conversation → spec (approve) → plan (approve) → cloud build
@@ -137,6 +139,7 @@ When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit
 | `references/vercel-react/` | Vercel's React and Next.js performance rules (MIT), copied in; the UI reviewer carries their index and reads a rule before citing it. `SOURCE.md` says how to update them |
 | `skills/codebase-design/` | mattpocock's deep-module skill (MIT), preloaded by the planner, implementer and Standards reviewer |
 | `lessons.md` | lessons from `/marrow retro` that hold in any repo, read by every agent |
+| `docs/guide.md` | the user guide: install to first PR, every command, labels, troubleshooting |
 | `docs/research/` | the research behind the design |
 
 ## Untested edges
