@@ -19,6 +19,9 @@
 #
 # With no .marrow/checks, the checks are detected from the worktree's files
 # (package.json scripts, go.mod, Cargo.toml, uv.lock, a Makefile test target).
+# A detected install is skipped when its lockfile and command match its last
+# green run in this worktree and what it installs is still there; "!" steps
+# from .marrow/checks always run.
 #
 # Exit 0 when every check is green, 1 when any is red, 2 on misuse. Each red
 # step's tail goes to <log dir>/failures.md, not the JSON. run-checks.sh runs
@@ -81,17 +84,36 @@ new_log() {
   LOG_PATH="$(printf '%s/%02d-%s.log' "$LOG_DIR" "$STEP_N" "$(echo "$1" | tr -cs 'A-Za-z0-9' '-' | sed 's/-$//')")"
 }
 
+sha256() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi; }
+
 # run_step <name> <command> [setup]: a failed setup step skips the rest.
+# setup is "setup", or "install=<lockfile>=<output dir>" for a detected install.
 run_step() {
   [[ $STOPPED -eq 1 ]] && return 1
-  local name="$1" cmd="$2" setup="${3:-}" log start rc
+  local name="$1" cmd="$2" setup="${3:-}" log start rc lock="" out="" stamp="" key=""
   new_log "$name"
   log="$LOG_PATH"
+  if [[ "$setup" == install=* ]]; then
+    IFS='=' read -r _ lock out <<<"$setup"
+    if [[ -f "$WT/$lock" ]]; then
+      stamp="$(git -C "$WT" rev-parse --absolute-git-dir)/marrow-install-$(echo "$name" | tr -cs 'A-Za-z0-9' '-' | sed 's/-$//').sha"
+      key="$({ cat "$WT/$lock"; echo "$cmd"; } | sha256 | cut -d' ' -f1)"
+      if [[ -f "$stamp" && "$(cat "$stamp")" == "$key" && ( -z "$out" || -e "$WT/$out" ) ]]; then
+        echo "skipped: $lock unchanged since the last install in this worktree" >"$log"
+        echo "checks: skip  $name ($lock unchanged)" >&2
+        record "$name" "$cmd" 0 0 "$log"
+        return 0
+      fi
+    fi
+  fi
   echo "checks: run   $name" >&2
   start=$SECONDS
   (cd "$WT" && bash -o pipefail -c "$cmd") >"$log" 2>&1
   rc=$?
   record "$name" "$cmd" "$rc" "$((SECONDS - start))" "$log"
+  if [[ -n "$stamp" ]]; then
+    if [[ $rc -eq 0 ]]; then echo "$key" >"$stamp"; else rm -f "$stamp"; fi
+  fi
   if [[ $rc -ne 0 && -n "$setup" ]]; then
     STOPPED=1
     note "stopped after: $name"
@@ -115,7 +137,7 @@ else
   done
 fi
 
-STEPS=() # "setup|name|command"
+STEPS=() # "setup|name|command"; setup is "", "setup", or "install=<lockfile>=<output dir>"
 add() { STEPS+=("$1|$2|$3"); }
 
 if [[ -n "$CONFIG" ]]; then
@@ -133,10 +155,11 @@ if [[ -n "$CONFIG" ]]; then
 else
   note "no .marrow/checks; detected checks from the worktree"
   if [[ -f "$WT/package.json" ]]; then
-    if [[ -f "$WT/pnpm-lock.yaml" ]]; then pm=pnpm; add setup "pnpm install" "pnpm install --frozen-lockfile"
-    elif [[ -f "$WT/yarn.lock" ]]; then pm=yarn; add setup "yarn install" "yarn install --frozen-lockfile"
-    elif [[ -f "$WT/bun.lockb" || -f "$WT/bun.lock" ]]; then pm=bun; add setup "bun install" "bun install --frozen-lockfile"
-    else pm=npm; add setup "npm ci" "npm ci --no-audit --no-fund"
+    if [[ -f "$WT/pnpm-lock.yaml" ]]; then pm=pnpm; add install=pnpm-lock.yaml=node_modules "pnpm install" "pnpm install --frozen-lockfile --prefer-offline"
+    elif [[ -f "$WT/yarn.lock" ]]; then pm=yarn; add install=yarn.lock=node_modules "yarn install" "yarn install --frozen-lockfile"
+    elif [[ -f "$WT/bun.lock" ]]; then pm=bun; add install=bun.lock=node_modules "bun install" "bun install --frozen-lockfile"
+    elif [[ -f "$WT/bun.lockb" ]]; then pm=bun; add install=bun.lockb=node_modules "bun install" "bun install --frozen-lockfile"
+    else pm=npm; add install=package-lock.json=node_modules "npm ci" "npm ci --no-audit --no-fund"
     fi
     for s in lint typecheck check-types check test build; do
       body="$(jq -r --arg s "$s" '.scripts[$s] // empty' "$WT/package.json")"
@@ -145,6 +168,7 @@ else
     done
   fi
   if [[ -f "$WT/go.mod" ]]; then
+    add install=go.sum= "go mod download" "go mod download"
     add "" "go build" "go build ./..."
     add "" "go vet" "go vet ./..."
     add "" "go test" "go test -count=1 ./..."
@@ -154,7 +178,7 @@ else
     add "" "cargo test" "cargo test"
   fi
   if [[ -f "$WT/uv.lock" ]]; then
-    add setup "uv sync" "uv sync --frozen"
+    add install=uv.lock=.venv "uv sync" "uv sync --frozen"
     add "" "pytest" "uv run pytest"
   fi
   if [[ ${#STEPS[@]} -eq 0 && -f "$WT/Makefile" ]] && grep -qE '^test:' "$WT/Makefile"; then
@@ -164,7 +188,7 @@ fi
 
 if [[ $SETUP_ONLY -eq 1 ]]; then
   SETUP=()
-  for s in ${STEPS[@]+"${STEPS[@]}"}; do [[ "$s" == setup\|* ]] && SETUP+=("$s"); done
+  for s in ${STEPS[@]+"${STEPS[@]}"}; do [[ "$s" == setup\|* || "$s" == install=* ]] && SETUP+=("$s"); done
   STEPS=(${SETUP[@]+"${SETUP[@]}"})
   if [[ ${#STEPS[@]} -eq 0 ]]; then
     jq -n --arg wt "$WT" '{worktree: $wt, ok: true, steps: [], notes: ["no setup steps"]}'

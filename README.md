@@ -94,7 +94,7 @@ Everything marrow writes in a repo is in `.marrow/` at its root, and each run is
 
 A review run holds `report.md` and `agent-log.md`. `runs.sh` works out each run's stage from its files (started, spec drafted or approved, plan drafted or approved, either changed since approval, building, built, published; reviewing or reviewed) and rewrites `README.md`. The scripts that move a run on rerun it, and `/marrow runs` shows the same table.
 
-`checks` is one `name: command` per line; a leading `!` marks a setup step. Without it, checks are detected (package.json scripts after an install, Go, Cargo, uv, `make test`). `notes.md` follows `templates/notes.md`, with repo lessons from `/marrow retro` at the end; every agent reads it. Retro keeps each lessons list, this one and marrow's `lessons.md`, to the 20 newest. Setup can share these two with the team: `.marrow/.gitignore` then ignores only the run folders and the overview, and you commit the rest.
+`checks` is one `name: command` per line; a leading `!` marks a setup step. Without it, checks are detected (package.json scripts after an install, Go, Cargo, uv, `make test`). Each worktree installs when it is made, and a detected install is skipped on later check runs while its lockfile and what it installed are unchanged; your own `!` steps always run. `notes.md` follows `templates/notes.md`, with repo lessons from `/marrow retro` at the end; every agent reads it. Retro keeps each lessons list, this one and marrow's `lessons.md`, to the 20 newest. Setup can share these two with the team: `.marrow/.gitignore` then ignores only the run folders and the overview, and you commit the rest.
 
 The worktrees are the one exception: they live in `.claude/worktrees/marrow-*`, which the guards key on.
 
@@ -129,7 +129,7 @@ When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit
 | `workflows/plan.js`, `build.js`, `review.js` | the Workflow scripts |
 | `CLOUD.md` | what the cloud session does |
 | `templates/spec.md`, `notes.md` | the spec and repo-notes skeletons |
-| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane`, `ui-files`, `test-ui-files` |
+| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane`, `test-checks`, `ui-files`, `test-ui-files` |
 | `references/vercel-react/` | Vercel's React and Next.js performance rules (MIT), copied in; the UI reviewer carries their index and reads a rule before citing it. `SOURCE.md` says how to update them |
 | `skills/codebase-design/` | mattpocock's deep-module skill (MIT), preloaded by the planner, implementer and Standards reviewer |
 | `lessons.md` | lessons from `/marrow retro` that hold in any repo, read by every agent |
