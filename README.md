@@ -60,7 +60,7 @@ Each choice follows the research in `docs/research/` (three reports, about 130 s
 ./install.sh
 ```
 
-It symlinks `~/.claude/marrow` to this folder, `agents/*.md` into `~/.claude/agents/`, and `skills/*` into `~/.claude/skills/`. Re-running is safe; it never replaces a real file. The agents' hooks call `~/.claude/marrow/scripts/guard.sh`, and a missing guard blocks every Bash call, so install before use.
+It symlinks `~/.claude/marrow` to this folder, `agents/*.md` into `~/.claude/agents/`, and `skills/*` into `~/.claude/skills/`, and adds this folder to `permissions.additionalDirectories` in `~/.claude/settings.json`: the Workflow tool loads scripts only from the working directory and added directories, so without it `/marrow` works only inside this folder. Restart Claude Code after the first install. Re-running is safe; it never replaces a real file. The agents' hooks call `~/.claude/marrow/scripts/guard.sh`, and a missing guard blocks every Bash call, so install before use.
 
 Needs `git`, `jq`, `python3`, `perl`, and for cloud builds and publishing: a GitHub origin, the Claude GitHub app on the repo, a claude.ai login (`claude --cloud` works), and `gh`.
 

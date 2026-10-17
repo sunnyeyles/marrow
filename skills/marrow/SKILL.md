@@ -20,7 +20,7 @@ BASE_BRANCH="$(git -C "$REPO" symbolic-ref --short refs/remotes/origin/HEAD 2>/d
 BASE_BRANCH="${BASE_BRANCH:-main}"
 ```
 
-Stop if you're not in a git repo. Feature names are slugs, `[A-Za-z0-9._-]+`, not starting with `review-`.
+Stop if you're not in a git repo. The Workflow tool only loads a `scriptPath` from the working directory or an added directory: if `$MARROW` is neither, stop before planning and tell me to re-run `install.sh` in the marrow checkout (it adds `$MARROW` to `permissions.additionalDirectories`) and restart, or start this session with `claude --add-dir "$MARROW"`. Never copy or retype a workflow script to get round this. Feature names are slugs, `[A-Za-z0-9._-]+`, not starting with `review-`.
 
 Everything marrow writes in the repo goes in `$REPO/.marrow/`, one dated folder per run (the layout is in `run-dir.sh`'s header). `run-dir.sh` makes and finds those folders; never make or name one by hand. For a subcommand on an existing feature:
 
@@ -42,7 +42,7 @@ A walkthrough, once per repo and again whenever something it settled changes. It
 
 Find out, without asking:
 
-- **Marrow:** `$MARROW` resolves and `~/.claude/agents/marrow-*.md` link into it. If not, tell the user to run `install.sh` in their marrow checkout, and stop.
+- **Marrow:** `$MARROW` resolves, `~/.claude/agents/marrow-*.md` link into it, and `$MARROW` is in `permissions.additionalDirectories` in `~/.claude/settings.json`. If not, tell the user to run `install.sh` in their marrow checkout, and stop.
 - **Tools:** `git`, `jq`, `python3`, `perl`, `claude`, and `gh` with `gh auth status`.
 - **Git:** an `origin` remote and whether it's on GitHub (cloud builds and `/marrow publish` need that); `origin/HEAD`, which names the base branch (unset, the scripts assume `main`); `git config user.name` and `user.email`.
 - **The repo:** `CLAUDE.md`, `AGENTS.md`, README, CONTRIBUTING and convention docs; languages and package managers; how tests are laid out, with a real test file and the command that runs just that file; CI config (`.github/workflows/` and the like), the best source for the real check commands and the services tests need.

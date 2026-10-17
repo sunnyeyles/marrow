@@ -6,13 +6,17 @@
 #
 # Links ~/.claude/marrow to this directory, each agents/*.md into
 # ~/.claude/agents/, and each skills/* into ~/.claude/skills/, and removes
-# links into this directory whose target is gone. Safe to re-run. Never
+# links into this directory whose target is gone. Adds this directory to
+# permissions.additionalDirectories in ~/.claude/settings.json, since the
+# Workflow tool loads scripts only from the working directory and added
+# directories, so /marrow works from any repo. Safe to re-run. Never
 # overwrites a real file or directory; it stops instead.
 set -euo pipefail
 
 # Resolves symlinks, so a linked install.sh still finds the source.
 SRC="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 CLAUDE_DIR="$HOME/.claude"
+SETTINGS="$CLAUDE_DIR/settings.json"
 
 # The agents' hooks hardcode $HOME/.claude/marrow, so another config dir would leave them without a guard.
 if [[ -n "${CLAUDE_CONFIG_DIR:-}" && "${CLAUDE_CONFIG_DIR%/}" != "$CLAUDE_DIR" ]]; then
@@ -38,6 +42,12 @@ link() {
     echo "linked   $path -> $target"
   fi
 }
+
+command -v jq >/dev/null || { echo "refusing: jq is needed to add $SRC to $SETTINGS" >&2; exit 1; }
+if [[ -e "$SETTINGS" ]] && ! jq -e 'type == "object"' "$SETTINGS" >/dev/null 2>&1; then
+  echo "refusing: $SETTINGS is not a JSON object. Fix it and re-run." >&2
+  exit 1
+fi
 
 # Check every path first, so a refusal leaves nothing half-installed.
 for path in "$CLAUDE_DIR/marrow" \
@@ -68,5 +78,16 @@ for path in "$CLAUDE_DIR"/agents/* "$CLAUDE_DIR"/skills/*; do
     echo "removed  $path (its target is gone)"
   fi
 done
+
+[[ -e "$SETTINGS" ]] || echo '{}' >"$SETTINGS"
+if jq -e --arg d "$SRC" '(.permissions.additionalDirectories // []) | index($d)' "$SETTINGS" >/dev/null; then
+  echo "ok       $SETTINGS has $SRC in additionalDirectories"
+else
+  jq --arg d "$SRC" '.permissions.additionalDirectories = ((.permissions.additionalDirectories // []) + [$d])' "$SETTINGS" >"$SETTINGS.tmp"
+  # cat, not mv, so a symlinked settings file stays a symlink.
+  cat "$SETTINGS.tmp" >"$SETTINGS"
+  rm "$SETTINGS.tmp"
+  echo "added    $SRC to additionalDirectories in $SETTINGS"
+fi
 
 echo "Done. Agent hooks call $CLAUDE_DIR/marrow/scripts/guard.sh."
