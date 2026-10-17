@@ -102,7 +102,7 @@ Older marrow kept a run in `.marrow/<feature>/`: once its build has reported (a 
 
 ## Branches
 
-- `marrow/<feature>`: the feature. The cloud session pushes it; `/marrow publish` opens the PR from it.
+- `marrow/<feature>`: the feature. The cloud session pushes it; `/marrow publish` opens the PR from it. It is also the record of what's done: a rerun continues from it (from origin's copy on a new machine) and skips each ticket with a `Merge ticket NN:` commit, whose `Tests-commit:` trailer lets the ledger still check that ticket's tests for tampering.
 - `marrow/<feature>-tNN` (and `-b`): ticket lanes, local to the build, deleted after merging.
 - `marrow-run/<feature>`: throwaway. It carries marrow, the approved spec and plan, and your git identity into the cloud session, and brings the report back, with a git bundle of the feature branch in case the cloud couldn't push it. `/marrow publish` deletes it.
 

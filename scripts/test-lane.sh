@@ -2,7 +2,9 @@
 # Point lane.sh detach and create at worktree paths that aren't theirs (a
 # plain directory, a build's worktree, a nested repo) in a scratch repo, and
 # check they refuse without touching the main checkout. Also checks that
-# checks.sh runs MARROW_CHECKS_FILE over a worktree's committed checks.
+# checks.sh runs MARROW_CHECKS_FILE over a worktree's committed checks, that
+# lane.sh merge writes a Tests-commit trailer that lane.sh merged reads back,
+# and that create continues from origin's branch when there's no local one.
 #
 # Usage: ./test-lane.sh
 set -uo pipefail
@@ -72,6 +74,35 @@ echo 't: true' >"$TMP/draft"
 ok "checks.sh runs the worktree's committed checks" not "$S/checks.sh" "$W/marrow-checks-bar"
 ok "MARROW_CHECKS_FILE overrides them" env MARROW_CHECKS_FILE="$TMP/draft" "$S/checks.sh" "$W/marrow-checks-bar"
 ok "MARROW_CHECKS_FILE must be absolute" bash -c "cd '$TMP' && MARROW_CHECKS_FILE=draft '$S/checks.sh' '$W/marrow-checks-bar'; [[ \$? -eq 2 ]]"
+
+# A ticket merge with its tests commit, pushed to an origin, then the local branch dropped.
+git init -q --bare "$TMP/origin.git"
+git -C "$M" remote add origin "$TMP/origin.git"
+git -C "$M" push -q origin main
+echo 't: true' >"$M/.marrow/checks"
+git -C "$M" commit -qam "green checks"
+git -C "$M" push -q origin main
+"$S/lane.sh" create "$M" origin/main "$W/marrow-f" marrow/f >/dev/null
+git -C "$M" worktree add -q -b marrow/f-t01 "$W/marrow-f-t01" marrow/f
+git -C "$W/marrow-f-t01" commit -q --allow-empty -m "Add acceptance tests for one"
+TC="$(git -C "$W/marrow-f-t01" rev-parse HEAD)"
+git -C "$W/marrow-f-t01" commit -q --allow-empty -m "Build one"
+ok "merge takes a tests commit" "$S/lane.sh" merge "$W/marrow-f" marrow/f-t01 "Merge ticket 01: one" "$TC"
+git -C "$W/marrow-f-t01" commit -q --allow-empty -m "Build two"
+"$S/lane.sh" merge "$W/marrow-f" marrow/f-t01 "Merge ticket 02: two" >/dev/null
+ok "merged lists both tickets" is "$("$S/lane.sh" merged "$W/marrow-f" | jq -c .merged)" '["01","02"]'
+ok "and the tests commit of the one that had it" is "$("$S/lane.sh" merged "$W/marrow-f" | jq -c .tests_commits)" "{\"01\":\"$TC\"}"
+git -C "$W/marrow-f" push -q origin marrow/f
+FHEAD="$(git -C "$W/marrow-f" rev-parse HEAD)"
+"$S/lane.sh" remove "$M" "$W/marrow-f-t01" marrow/f-t01 >/dev/null 2>&1
+"$S/lane.sh" remove "$M" "$W/marrow-f" marrow/f >/dev/null 2>&1
+out="$("$S/lane.sh" create "$M" origin/main "$W/marrow-f" marrow/f)"
+ok "create continues from origin's branch when there's no local one" is "$(jq -r .from <<<"$out")" origin
+ok "at its head" is "$(git -C "$W/marrow-f" rev-parse HEAD)" "$FHEAD"
+"$S/lane.sh" remove "$M" "$W/marrow-f" marrow/f >/dev/null 2>&1
+git -C "$M" push -q origin main:marrow/g-t01
+out="$("$S/lane.sh" create "$M" origin/main "$W/marrow-g-t01" marrow/g-t01 --fresh)"
+ok "a --fresh lane ignores origin's branch" is "$(jq -r .from <<<"$out")" start
 
 echo
 if [[ $FAILS -eq 0 ]]; then echo "all passed"; else echo "$FAILS failed"; fi

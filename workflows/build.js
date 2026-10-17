@@ -241,12 +241,14 @@ if (!int.ok) {
 } else {
   res.base = int.base
   res.head = int.head
-  // A rerun reuses the integration branch: tickets already merged there aren't built again.
+  // A rerun reuses the integration branch (local, or origin's on a new machine): tickets already merged there aren't built again.
+  if (int.from === 'origin') log(`${R.branch}: continuing from origin/${R.branch}`)
   const prior = await sh(`"${S}/lane.sh" merged ${q(R.worktree)}`, 'tickets merged earlier', 'Prepare')
   for (const id of (prior && prior.merged) || []) {
     if (!res.tickets[id]) continue
     res.tickets[id].merged = true
     res.tickets[id].status = 'merged'
+    res.tickets[id].tests_commit = (prior.tests_commits || {})[id] || ''
     res.tickets[id].notes.push('merged by an earlier run')
   }
 }
@@ -363,7 +365,8 @@ async function lane(t) {
 
   await mergeLock(async () => {
     const branch = win.tag === 'b' ? laneBranch(t.id, true) : laneBranch(t.id)
-    const m = await sh(`"${S}/lane.sh" merge ${q(R.worktree)} ${q(branch)} ${q(`Merge ticket ${t.id}: ${t.title}`)}`, `${t.id} merge`, 'Merge', t.id)
+    // The tests commit goes in a trailer, so a rerun can still give it to the ledger.
+    const m = await sh(`"${S}/lane.sh" merge ${q(R.worktree)} ${q(branch)} ${q(`Merge ticket ${t.id}: ${t.title}`)}${tr.tests_commit ? ` ${q(tr.tests_commit)}` : ''}`, `${t.id} merge`, 'Merge', t.id)
     if (!m.ok && m.conflict) {
       const fix = await step(
         ['Mode: resolve', ctx(R.worktree, [`Base branch: ${BASE_BRANCH}`]), '', `Merging ${branch} (ticket ${t.id}: ${t.title}) into ${R.branch} conflicted in: ${(m.files || []).join(', ')}.`,

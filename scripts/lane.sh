@@ -6,6 +6,9 @@
 #   lane.sh create <main-checkout> <start-ref> <worktree> <branch> [--fresh]
 #       Make (or reuse, when clean and on <branch>) a worktree on <branch>,
 #       starting it at <start-ref>, then run checks.sh --setup-only in it.
+#       With no local <branch>, an origin/<branch> (fetched first) is used
+#       instead of <start-ref>: a rerun on a new machine picks up the
+#       tickets an earlier run merged and pushed. "from" says which.
 #       --fresh discards any existing worktree and branch first (ticket lanes
 #       are disposable; merged work lives on the integration branch).
 #       "base" is the merge-base of <start-ref> and the worktree's HEAD.
@@ -16,14 +19,16 @@
 #   lane.sh lock <worktree> <lock-json>
 #       Write the file lock guard.sh reads: {"owns": [...], "tests": [...],
 #       "test_helpers": [...], "locked": [...]}. "{}" clears it.
-#   lane.sh merge <into-worktree> <branch> <message>
-#       Merge <branch> into the worktree's branch with --no-ff. On conflict
-#       the merge is left in progress and the conflicted files are listed.
+#   lane.sh merge <into-worktree> <branch> <message> [tests-commit]
+#       Merge <branch> into the worktree's branch with --no-ff, adding a
+#       "Tests-commit:" trailer when given. On conflict the merge is left in
+#       progress (its message kept) and the conflicted files are listed.
 #   lane.sh settle <worktree>
 #       After a conflict resolution: ok when no merge or rebase is in
 #       progress; otherwise abort it and report that.
 #   lane.sh merged <worktree>
-#       Ticket ids already merged on the worktree's branch ("Merge ticket NN:").
+#       Ticket ids already merged on the worktree's branch ("Merge ticket NN:"),
+#       and each one's tests commit from the merge's "Tests-commit:" trailer.
 #   lane.sh remove <main-checkout> <worktree> [branch]
 #       Remove a marrow worktree, and delete its marrow/* branch if given.
 #
@@ -66,6 +71,7 @@ case "${1:-}" in
     fi
     exclude_worktrees "$MAIN"
     reused=false
+    from=local
     if [[ -e "$WT" ]]; then
       own_worktree "$WT" || die "$WT exists but is not a worktree; not touching it"
       [[ "$(git -C "$WT" rev-parse --abbrev-ref HEAD 2>/dev/null)" == "$BRANCH" ]] || die "$WT exists but is not on $BRANCH"
@@ -75,14 +81,23 @@ case "${1:-}" in
       git -C "$MAIN" worktree add -q "$WT" "$BRANCH" >&2 || die "worktree add failed"
       reused=true
     else
-      git -C "$MAIN" worktree add -q -b "$BRANCH" "$WT" "$START" >&2 || die "worktree add -b $BRANCH from $START failed"
+      # Ticket lanes (--fresh) are never pushed, so only the integration branch looks for one.
+      [[ "${6:-}" == --fresh ]] || git -C "$MAIN" fetch -q origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" >/dev/null 2>&1 || true
+      if [[ "${6:-}" != --fresh ]] && git -C "$MAIN" show-ref --verify -q "refs/remotes/origin/$BRANCH"; then
+        git -C "$MAIN" worktree add -q -b "$BRANCH" "$WT" "origin/$BRANCH" >&2 || die "worktree add -b $BRANCH from origin/$BRANCH failed"
+        reused=true
+        from=origin
+      else
+        git -C "$MAIN" worktree add -q -b "$BRANCH" "$WT" "$START" >&2 || die "worktree add -b $BRANCH from $START failed"
+        from=start
+      fi
     fi
     setup="$("$HERE/checks.sh" --setup-only "$WT" 2>/dev/null)"
     rc=$?
     base="$(git -C "$WT" merge-base "$START" HEAD 2>/dev/null || git -C "$WT" rev-parse HEAD)"
     out --arg wt "$WT" --arg b "$BRANCH" --arg head "$(git -C "$WT" rev-parse HEAD)" --arg base "$base" --argjson reused "$reused" \
-      --argjson rc "$rc" --arg setup "$setup" \
-      '{ok: ($rc == 0 or $rc == 2), worktree: $wt, branch: $b, head: $head, base: $base, reused: $reused,
+      --argjson rc "$rc" --arg setup "$setup" --arg from "$from" \
+      '{ok: ($rc == 0 or $rc == 2), worktree: $wt, branch: $b, head: $head, base: $base, reused: $reused, from: $from,
         setup: (try ($setup | fromjson) catch $setup)}'
     [[ $rc -eq 0 || $rc -eq 2 ]]
     ;;
@@ -112,10 +127,11 @@ case "${1:-}" in
     out --arg f "$gitdir/marrow-lock.json" '{ok: true, lock_file: $f}'
     ;;
   merge)
-    [[ $# -eq 4 ]] || usage
-    WT="$2" BRANCH="$3" MSG="$4"
+    [[ $# -eq 4 || $# -eq 5 ]] || usage
+    WT="$2" BRANCH="$3" MSG=(-m "$4")
+    [[ -n "${5:-}" ]] && MSG+=(-m "Tests-commit: $5")
     [[ -z "$(git -C "$WT" status --porcelain --untracked-files=no)" ]] || die "$WT has uncommitted changes"
-    if git -C "$WT" merge --no-ff -q -m "$MSG" "$BRANCH" >&2; then
+    if git -C "$WT" merge --no-ff -q "${MSG[@]}" "$BRANCH" >&2; then
       out --arg head "$(git -C "$WT" rev-parse HEAD)" '{ok: true, conflict: false, head: $head}'
     else
       files="$(git -C "$WT" diff --name-only --diff-filter=U | jq -R . | jq -s .)"
@@ -146,8 +162,12 @@ case "${1:-}" in
     ;;
   merged)
     [[ $# -eq 2 ]] || usage
-    ids="$(git -C "$2" log --format=%s 2>/dev/null | sed -nE 's/^Merge ticket ([0-9]+):.*/\1/p' | sort -u | jq -R . | jq -s .)"
-    out --argjson ids "$ids" '{ok: true, merged: $ids}'
+    # One line per commit: the subject, a unit separator, then any Tests-commit trailer.
+    git -C "$2" log --format='%s%x1f%(trailers:key=Tests-commit,valueonly,separator=%x20)' 2>/dev/null |
+      jq -R -s '[split("\n")[] | split("\u001f") | select((.[0] // "") | test("^Merge ticket [0-9]+:"))
+          | {id: (.[0] | capture("^Merge ticket (?<id>[0-9]+):").id), tc: ((.[1] // "") | gsub("\\s"; ""))}] as $r
+        | {ok: true, merged: ($r | map(.id) | unique),
+           tests_commits: ($r | map(select(.tc != "")) | reverse | map({(.id): .tc}) | add // {})}'
     ;;
   remove)
     [[ $# -ge 3 ]] || usage
