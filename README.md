@@ -3,12 +3,14 @@
 A software factory for Claude Code. You talk through a feature, approve a spec and a plan, and marrow builds it unattended in a Claude Code cloud session. It writes tests first, keeps them locked, checks every ticket outside the agent that did it, and reviews the result adversarially. You approve the PR at the end.
 
 ```
+/marrow setup                walk through fitting marrow to this repo: checks, tests, conventions
 /marrow new <feature>        conversation → spec (approve) → plan (approve) → cloud build
 /marrow status <feature>     the build's report, acceptance ledger and proposed PR
 /marrow publish <feature>    open the PR (your approval)
 /marrow build <feature> [--here] [--lite]    start or restart a build
 /marrow plan <feature>       re-plan an approved spec
 /marrow review <branch> [spec]               review any branch, read-only
+/marrow runs                 an overview of every run in this repo
 /marrow retro <feature>      turn a PR's review into lessons for every agent
 ```
 
@@ -62,9 +64,23 @@ It symlinks `~/.claude/marrow` to this folder, `agents/*.md` into `~/.claude/age
 
 Needs `git`, `jq`, `python3`, `perl`, and for cloud builds and publishing: a GitHub origin, the Claude GitHub app on the repo, a claude.ai login (`claude --cloud` works), and `gh`.
 
+Then, in each repo, run `/marrow setup` once. It surveys the repo, asks you a few questions, writes `.marrow/checks` and `.marrow/notes.md`, and proves the checks green on a clean copy of the base branch before any build depends on them.
+
 ## Files in the target repo
 
-`.marrow/<feature>/` holds everything for one feature. It's kept out of git through `.git/info/exclude`:
+Everything marrow writes in a repo is in `.marrow/` at its root, and each run is one folder in it, named `<date>-<name>`, so the folder is the repo's history of runs:
+
+```
+.marrow/
+  .gitignore                    "*": all of it stays out of git, unless setup shares the setup
+  README.md                     the overview of every run, newest first (runs.sh)
+  checks                        the check commands (setup)
+  notes.md                      what every agent should know about the repo (setup, retro)
+  2026-10-17-passwordless-login/
+  2026-10-18-review-fix-login/
+```
+
+`run-dir.sh` makes and finds the run folders; a review's is `<date>-review-<branch>`, so feature names can't start with `review-`. A feature's folder holds:
 
 | File | Written by |
 | --- | --- |
@@ -72,10 +88,17 @@ Needs `git`, `jq`, `python3`, `perl`, and for cloud builds and publishing: a Git
 | `plan.json`, `plan.md` | the plan workflow |
 | `approvals.json` | `approve.sh`: sha256 of the approved spec and plan; any later edit blocks the build |
 | `cloud.json`, `cloud.log` | `cloud-launch.sh` |
-| `report.md`, `agent-log.md`, `pr.md`, `ledger.json`, `result.json` | the build |
+| `build-args.json` | `build-args.sh`, for a build here |
+| `report.md`, `agent-log.md`, `pr.md`, `ledger.json`, `result.json`, `feature.bundle` | the build |
 | `published.json` | `/marrow publish` |
 
-Optional and committed: `.marrow/checks`, the repo's check commands, one `name: command` per line; a leading `!` marks a setup step. Without it, checks are detected (package.json scripts after an install, Go, Cargo, uv, `make test`).
+A review run holds `report.md` and `agent-log.md`. `runs.sh` works out each run's stage from its files (started, spec drafted or approved, plan drafted or approved, either changed since approval, building, built, published; reviewing or reviewed) and rewrites `README.md`. The scripts that move a run on rerun it, and `/marrow runs` shows the same table.
+
+`checks` is one `name: command` per line; a leading `!` marks a setup step. Without it, checks are detected (package.json scripts after an install, Go, Cargo, uv, `make test`). `notes.md` follows `templates/notes.md`, with repo lessons from `/marrow retro` at the end; every agent reads it. Retro keeps each lessons list, this one and marrow's `lessons.md`, to the 20 newest. Setup can share these two with the team: `.marrow/.gitignore` then ignores only the run folders and the overview, and you commit the rest.
+
+The worktrees are the one exception: they live in `.claude/worktrees/marrow-*`, which the guards key on.
+
+Older marrow kept a run in `.marrow/<feature>/`: once its build has reported (a cloud build still running writes to the old path), rename it `<YYYY-MM-DD>-<feature>` to keep using it.
 
 ## Branches
 
@@ -105,10 +128,10 @@ When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit
 | `agents/` | spec critic, planner, plan critic, test writer, implementer, judge, three reviewers, skeptic, git-sync, runner; the Spec and Standards reviewers are adapted from mattpocock's `code-review` skill |
 | `workflows/plan.js`, `build.js`, `review.js` | the Workflow scripts |
 | `CLOUD.md` | what the cloud session does |
-| `templates/spec.md` | the spec skeleton |
-| `scripts/` | `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff` |
+| `templates/spec.md`, `notes.md` | the spec and repo-notes skeletons |
+| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane` |
 | `skills/codebase-design/` | mattpocock's deep-module skill (MIT), preloaded by the planner, implementer and Standards reviewer |
-| `lessons.md` | lessons from `/marrow retro`, read by every agent |
+| `lessons.md` | lessons from `/marrow retro` that hold in any repo, read by every agent |
 | `docs/research/` | the research behind the design |
 
 ## Untested edges

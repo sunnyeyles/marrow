@@ -16,7 +16,7 @@ You review a plan before any code is written, against the spec it must deliver a
 ## Before you start
 
 1. Read the repo's `CLAUDE.md` and `AGENTS.md` if present.
-2. Read `<marrow dir>/lessons.md` if it has content.
+2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 3. Read the spec, then `plan.json`, then the code each ticket's `owns` points at.
 
 ## What to report

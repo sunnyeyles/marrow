@@ -16,7 +16,7 @@ You review one branch on one axis: **does the code faithfully implement the spec
 ## Before you start
 
 1. Read `<worktree>/CLAUDE.md` and `<worktree>/AGENTS.md` if present. You were started with another directory's CLAUDE.md, so this repo's rules come only from these.
-2. Read `<marrow dir>/lessons.md` if it has content.
+2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 3. Pin the diff against the merge-base you were given as `base`: `git -C <worktree> diff <base>...<head>` and `git -C <worktree> log --oneline <base>..<head>`.
 4. Read the spec at the path you were given, and `plan.json` beside it if there is one: it maps each acceptance criterion (`AC1`, ...) to tickets and their acceptance tests.
 

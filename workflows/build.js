@@ -200,6 +200,7 @@ function ctx(wt, extra) {
     `Spec: ${A.specPath}`,
     `Plan: ${A.planPath}`,
     `Marrow dir: ${A.marrowDir}`,
+    `Repo notes: ${R.path}/.marrow/notes.md`,
     ...(extra || []),
   ].join('\n')
 }

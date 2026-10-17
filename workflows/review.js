@@ -92,6 +92,7 @@ const context = [
   `Commits: git -C ${A.worktree} log --oneline ${A.base}..${A.head}`,
   `Spec: ${SPEC || 'none given'}`,
   `Marrow dir: ${A.marrowDir}`,
+  `Repo notes: ${A.repoPath}/.marrow/notes.md`,
   '',
   `First read ${A.worktree}/CLAUDE.md and ${A.worktree}/AGENTS.md if present.`,
   'You were started with a different directory\'s CLAUDE.md, so this repo\'s rules come only from those files.',

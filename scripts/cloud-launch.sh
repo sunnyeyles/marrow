@@ -8,14 +8,14 @@
 # pushes a run branch, marrow-run/<feature>, cut from origin/<default>, that
 # carries marrow itself (.claude/marrow, .claude/agents/marrow-*.md, the
 # codebase-design skill, a guard hook in .claude/settings.json) and the
-# approved spec and plan (.marrow/<feature>/). The cloud session builds on
+# approved spec and plan (the feature's run folder in .marrow/). The cloud session builds on
 # marrow/<feature> in a worktree, so none of that reaches the feature branch,
 # pushes marrow/<feature> and its report back to the run branch, and opens no
 # PR. /marrow publish does that locally, after you approve.
 #
 # --replace  overwrite an existing marrow-run/<feature> on origin.
 # --dry-run  build and show the scaffold commit; push and launch nothing.
-# Writes <repo>/.marrow/<feature>/cloud.json. Exit 0 launched, 1 failed.
+# Writes cloud.json into the run folder. Exit 0 launched, 1 failed.
 set -euo pipefail
 
 HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
@@ -37,7 +37,8 @@ for a in "$@"; do
 done
 
 REPO="$(git -C "$REPO_ARG" rev-parse --show-toplevel)"
-FDIR="$REPO/.marrow/$FEATURE"
+FDIR="$("$HERE/run-dir.sh" find "$REPO" "$FEATURE")"
+REL="${FDIR#"$REPO"/}"
 RUN="marrow-run/$FEATURE"
 "$HERE/approve.sh" "$FDIR" check >/dev/null
 
@@ -65,7 +66,7 @@ git -C "$REPO" branch -D "$RUN" >/dev/null 2>&1 || true
 git -C "$REPO" worktree add -q -b "$RUN" "$WT" "origin/$BASE"
 
 # marrow itself, with hook paths pointing into the clone.
-mkdir -p "$WT/.claude/marrow" "$WT/.claude/agents" "$WT/.claude/skills" "$WT/.marrow/$FEATURE"
+mkdir -p "$WT/.claude/marrow" "$WT/.claude/agents" "$WT/.claude/skills" "$WT/$REL"
 cp -R "$SRC/scripts" "$SRC/workflows" "$SRC/CLOUD.md" "$SRC/lessons.md" "$WT/.claude/marrow/"
 for a in "$SRC"/agents/*.md; do
   sed 's#\$HOME/\.claude/marrow#$CLAUDE_PROJECT_DIR/.claude/marrow#g' "$a" >"$WT/.claude/agents/$(basename "$a")"
@@ -79,12 +80,14 @@ SETTINGS="$WT/.claude/settings.json"
 jq --argjson h "$HOOK" '.hooks.PreToolUse = ((.hooks.PreToolUse // []) + [$h])' "$SETTINGS" >"$SETTINGS.tmp"
 mv "$SETTINGS.tmp" "$SETTINGS"
 
-cp "$FDIR/spec.md" "$FDIR/plan.json" "$FDIR/approvals.json" "$WT/.marrow/$FEATURE/"
-# The repo's check list, when it lives only in the local checkout.
-if [[ -f "$REPO/.marrow/checks" && ! -f "$WT/.marrow/checks" ]]; then cp "$REPO/.marrow/checks" "$WT/.marrow/checks"; fi
+cp "$FDIR/spec.md" "$FDIR/plan.json" "$FDIR/approvals.json" "$WT/$REL/"
+# The repo's setup from /marrow setup, when it lives only in the local checkout.
+for f in checks notes.md; do
+  if [[ -f "$REPO/.marrow/$f" && ! -f "$WT/.marrow/$f" ]]; then cp "$REPO/.marrow/$f" "$WT/.marrow/$f"; fi
+done
 # Commits in the cloud carry your identity, not the VM's.
 jq -n --arg n "$(git -C "$REPO" config user.name || true)" --arg e "$(git -C "$REPO" config user.email || true)" \
-  '{name: $n, email: $e}' >"$WT/.marrow/$FEATURE/identity.json"
+  '{name: $n, email: $e}' >"$WT/$REL/identity.json"
 git -C "$WT" add -f .claude .marrow
 git -C "$WT" commit -q -m "marrow: run scaffold for $FEATURE" -m "Throwaway branch for a marrow cloud build. Deleted by /marrow publish."
 
@@ -99,6 +102,8 @@ if [[ $REPLACE -eq 1 ]]; then
 else
   git -C "$WT" push -q -u origin "$RUN"
 fi
+# This is now a cloud build; a build here would have left build-args.json (see runs.sh).
+rm -f "$FDIR/build-args.json"
 
 PROMPT="Marrow cloud build of feature \"$FEATURE\"${LITE:+ (lite)}. Follow .claude/marrow/CLOUD.md exactly, with FEATURE=$FEATURE${LITE:+ and LITE=1}. Don't ask questions: run to the end, then push the report as it says."
 
@@ -115,6 +120,7 @@ jq -n --arg run "$RUN" --arg branch "marrow/$FEATURE" --arg base "$BASE" --arg u
   '{run_branch: $run, feature_branch: $branch, base: $base, session_url: (if $url == "" then null else $url end),
     launched_at: $at, launch_exit: $rc, prompt: $prompt}' >"$FDIR/cloud.json"
 cat "$FDIR/cloud.json"
+"$HERE/runs.sh" "$REPO" >/dev/null 2>&1 || true
 if [[ $rc -ne 0 && -z "$SESSION" ]]; then
   echo "claude --cloud exited $rc with no session URL; see $LOG. The run branch is pushed, so you can start it by hand:" >&2
   echo "  cd into a checkout of $RUN and run: claude --cloud '$PROMPT'" >&2

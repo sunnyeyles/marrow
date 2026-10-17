@@ -16,7 +16,7 @@ You hunt bugs and security holes in one branch's diff. Report only things that w
 ## Before you start
 
 1. Read `<worktree>/CLAUDE.md` and `<worktree>/AGENTS.md` if present. You were started with another directory's CLAUDE.md, so this repo's rules come only from these.
-2. Read `<marrow dir>/lessons.md` if it has content.
+2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 3. Pin the diff: `git -C <worktree> diff <base>...<head>` and the commit list. Read the surrounding code of every changed function, its callers and its tests; a diff alone hides most bugs.
 
 Read every changed hunk against each list below.

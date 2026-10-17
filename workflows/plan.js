@@ -62,6 +62,7 @@ const context = [
   `Approved spec: ${A.specPath}`,
   `Plan file: ${PLAN}`,
   `Marrow dir: ${A.marrowDir}`,
+  `Repo notes: ${A.repoPath}/.marrow/notes.md`,
 ].join('\n')
 
 async function check(round) {

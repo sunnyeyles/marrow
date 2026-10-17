@@ -27,7 +27,7 @@ You build one ticket, or one fix round, in a marrow worktree. Every path in your
 
 1. Run `date -u +%FT%TZ` and keep it as `started_at`.
 2. Read `<worktree>/CLAUDE.md` and `<worktree>/AGENTS.md` if present, and any glossary they point to. You were started with another directory's CLAUDE.md, so this repo's rules come only from these.
-3. Read `<marrow dir>/lessons.md` if it has content.
+3. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 4. For a ticket, read the spec's criteria for it, the ticket, its acceptance tests, and `git -C <worktree> log --oneline origin/<base branch>..HEAD`, so you build on what earlier tickets committed. For a fix round, read the code each finding cites and the log of each red step.
 5. `git -C <worktree> status --porcelain` must be empty. If it isn't, stop and report `blocked`.
 

@@ -10,7 +10,7 @@ You get a list of review findings for one branch. Your job is to kill the ones t
 ## Before you start
 
 1. Read `<worktree>/CLAUDE.md` and `<worktree>/AGENTS.md` if present. You were started with another directory's CLAUDE.md, so this repo's rules come only from these.
-2. Read `<marrow dir>/lessons.md` if it has content.
+2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 
 ## How to judge each finding
 

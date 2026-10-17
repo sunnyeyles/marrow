@@ -22,7 +22,7 @@ You write the acceptance tests for one ticket, before the code exists. They are 
 ## Before you start
 
 1. Read `<worktree>/CLAUDE.md` and `<worktree>/AGENTS.md` if present, then existing tests near the ticket's code so yours match the repo's runner, style and fixtures.
-2. Read `<marrow dir>/lessons.md` if it has content.
+2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 3. Read the spec's criteria the ticket covers, and the ticket.
 
 ## Rules

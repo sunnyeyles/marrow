@@ -28,7 +28,7 @@ done
 
 REPO="$(git -C "$REPO_ARG" rev-parse --show-toplevel)"
 MARROW="$(cd -P "$MARROW" && pwd)"
-FDIR="$REPO/.marrow/$FEATURE"
+FDIR="$("$MARROW/scripts/run-dir.sh" find "$REPO" "$FEATURE")"
 "$MARROW/scripts/approve.sh" "$FDIR" check >/dev/null
 WAVES="$("$MARROW/scripts/plan-check.sh" "$FDIR")" || { echo "$WAVES" >&2; exit 1; }
 

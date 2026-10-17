@@ -16,7 +16,7 @@ You read a draft spec as the engineer who will be held to it, with none of the c
 ## Before you start
 
 1. Read the repo's `CLAUDE.md` and `AGENTS.md` if present, and enough of the code the spec touches to know what exists.
-2. Read `<marrow dir>/lessons.md` if it has content.
+2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 
 ## What to report
 

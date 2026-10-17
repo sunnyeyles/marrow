@@ -9,6 +9,10 @@
 #       --fresh discards any existing worktree and branch first (ticket lanes
 #       are disposable; merged work lives on the integration branch).
 #       "base" is the merge-base of <start-ref> and the worktree's HEAD.
+#   lane.sh detach <main-checkout> <worktree> <sha>
+#       Make a detached worktree at <sha> for a review, or move an existing
+#       clean, detached one there. Refuses a dirty one, one on a branch (a
+#       build's worktree can share the name), and a path that isn't a worktree.
 #   lane.sh lock <worktree> <lock-json>
 #       Write the file lock guard.sh reads: {"owns": [...], "tests": [...],
 #       "test_helpers": [...], "locked": [...]}. "{}" clears it.
@@ -30,9 +34,24 @@ HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 out() { jq -n "$@"; }
 die() { out --arg e "$1" '{ok: false, error: $e}'; exit 1; }
-usage() { echo "usage: lane.sh create|lock|merge|settle|merged|remove ... (see the header)" >&2; exit 2; }
+usage() { echo "usage: lane.sh create|detach|lock|merge|settle|merged|remove ... (see the header)" >&2; exit 2; }
 
 marrow_wt() { [[ "$1" == */.claude/worktrees/marrow-* ]]; }
+# own_worktree <path>: <path> is the top of a linked worktree. Without this, git
+# -C on a plain directory inside the main checkout would act on the main checkout.
+own_worktree() {
+  local top gitdir common
+  top="$(git -C "$1" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  gitdir="$(git -C "$1" rev-parse --absolute-git-dir 2>/dev/null)" || return 1
+  common="$(git -C "$1" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || return 1
+  [[ "$top" == "$(cd -P "$1" && pwd)" && "$gitdir" != "$common" ]]
+}
+# Keep the worktrees out of the main checkout's git status.
+exclude_worktrees() {
+  local info
+  info="$(git -C "$1" rev-parse --path-format=absolute --git-common-dir)/info"
+  git -C "$1" check-ignore -q --no-index .claude/worktrees/ || { mkdir -p "$info" && echo ".claude/worktrees/" >>"$info/exclude"; }
+}
 
 case "${1:-}" in
   create)
@@ -45,10 +64,10 @@ case "${1:-}" in
       [[ -e "$WT" ]] && { git -C "$MAIN" worktree remove --force "$WT" >&2 || die "could not remove the old $WT"; }
       git -C "$MAIN" branch -D "$BRANCH" >/dev/null 2>&1 || true
     fi
-    git -C "$MAIN" check-ignore -q --no-index .claude/worktrees/ ||
-      echo ".claude/worktrees/" >>"$(git -C "$MAIN" rev-parse --git-common-dir)/info/exclude"
+    exclude_worktrees "$MAIN"
     reused=false
     if [[ -e "$WT" ]]; then
+      own_worktree "$WT" || die "$WT exists but is not a worktree; not touching it"
       [[ "$(git -C "$WT" rev-parse --abbrev-ref HEAD 2>/dev/null)" == "$BRANCH" ]] || die "$WT exists but is not on $BRANCH"
       [[ -z "$(git -C "$WT" status --porcelain)" ]] || die "$WT has uncommitted changes; not touching it"
       reused=true
@@ -66,6 +85,22 @@ case "${1:-}" in
       '{ok: ($rc == 0 or $rc == 2), worktree: $wt, branch: $b, head: $head, base: $base, reused: $reused,
         setup: (try ($setup | fromjson) catch $setup)}'
     [[ $rc -eq 0 || $rc -eq 2 ]]
+    ;;
+  detach)
+    [[ $# -eq 4 ]] || usage
+    MAIN="$2" WT="$3" SHA="$4"
+    marrow_wt "$WT" || die "worktree must be under .claude/worktrees/marrow-*"
+    git -C "$MAIN" worktree prune
+    exclude_worktrees "$MAIN"
+    if [[ -e "$WT" ]]; then
+      own_worktree "$WT" || die "$WT exists but is not a worktree; not touching it"
+      ! git -C "$WT" symbolic-ref -q HEAD >/dev/null || die "$WT is on a branch, so another run owns it; not touching it"
+      [[ -z "$(git -C "$WT" status --porcelain)" ]] || die "$WT has uncommitted changes; not touching it"
+      git -C "$WT" checkout --detach --quiet "$SHA" >&2 || die "checkout of $SHA in $WT failed"
+    else
+      git -C "$MAIN" worktree add -q --detach "$WT" "$SHA" >&2 || die "worktree add --detach $SHA failed"
+    fi
+    out --arg wt "$WT" --arg head "$(git -C "$WT" rev-parse HEAD)" '{ok: true, worktree: $wt, head: $head}'
     ;;
   lock)
     [[ $# -eq 3 ]] || usage

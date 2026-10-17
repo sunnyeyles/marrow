@@ -18,7 +18,7 @@ You plan one feature. Your prompt gives the repo, the approved spec, and the pat
 ## Before you start
 
 1. Read the repo's `CLAUDE.md` and `AGENTS.md` if present, then the code the spec touches: entry points, the modules that will change, and how tests are laid out and run (find a real test file and the command that runs one file).
-2. Read `<marrow dir>/lessons.md` if it has content.
+2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 3. Read the spec. Its acceptance criteria (`AC1`, `AC2`, ...) are the contract.
 
 ## How to slice
@@ -30,7 +30,7 @@ You plan one feature. Your prompt gives the repo, the approved spec, and the pat
 - **Tests first.** Each ticket that covers an `auto` criterion names the test files to create (`tests.paths`, real file paths, not globs, in the repo's test layout) and the exact command that runs just those tests (`tests.command`). A test writer writes them before the code exists and they must fail first, so they test behaviour through the public interface, not internals. Put fixtures or shared test utilities in `tests.helpers` globs.
 - **Difficulty.** `hard` for tickets with real design choices, tricky concurrency, or algorithms where two independent attempts are worth the cost; two implementers race and a judge picks. Everything else is `normal`. Expect most tickets to be `normal`.
 - **Human steps.** Anything only a human can do (console setup, secrets, infra applies) goes in `human_steps`, never in a ticket's work.
-- **Lanes.** Tickets in the same wave run in parallel worktrees, up to 3. If the repo's tests share something that can't be used concurrently (one test database whose tables they truncate, fixed ports), set top-level `"lanes": 1`; set 2 if only some do.
+- **Lanes.** Tickets in the same wave run in parallel worktrees, up to 3. If the repo's tests share something that can't be used concurrently (one test database whose tables they truncate, fixed ports), set top-level `"lanes": 1`; set 2 if only some do. The repo notes may already say which.
 - **Criteria.** Copy every spec criterion into `criteria` with its text, and `verify` set to `auto` (a test can check it) or `manual`. Every `auto` criterion must be covered by at least one ticket.
 
 ## plan.json

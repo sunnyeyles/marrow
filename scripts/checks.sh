@@ -8,7 +8,8 @@
 # --setup-only runs just the setup ("!") steps, such as installs.
 #
 # The checks come from .marrow/checks, read from the worktree (if committed)
-# or else the repo's main checkout. One check per line, "name: command", run
+# or else the repo's main checkout; MARROW_CHECKS_FILE, an absolute path,
+# overrides both (/marrow setup uses it to prove a draft). One check per line, "name: command", run
 # by bash in the worktree; a line starting with "#" is a comment. A name starting with "!" is
 # a setup step: when it fails, the later steps are skipped. Example:
 #
@@ -102,9 +103,17 @@ run_step() {
 
 MAIN="$(dirname "$(cd "$WT" && cd -P "$(git rev-parse --git-common-dir)" && pwd)")"
 CONFIG=""
-for f in "$WT/.marrow/checks" "$MAIN/.marrow/checks"; do
-  if [[ -f "$f" ]]; then CONFIG="$f"; break; fi
-done
+if [[ -n "${MARROW_CHECKS_FILE:-}" ]]; then
+  if [[ "$MARROW_CHECKS_FILE" != /* || ! -f "$MARROW_CHECKS_FILE" ]]; then
+    jq -n --arg f "$MARROW_CHECKS_FILE" '{ok: false, error: "MARROW_CHECKS_FILE must be an absolute path to a file: \($f)"}'
+    exit 2
+  fi
+  CONFIG="$MARROW_CHECKS_FILE"
+else
+  for f in "$WT/.marrow/checks" "$MAIN/.marrow/checks"; do
+    if [[ -f "$f" ]]; then CONFIG="$f"; break; fi
+  done
+fi
 
 STEPS=() # "setup|name|command"
 add() { STEPS+=("$1|$2|$3"); }

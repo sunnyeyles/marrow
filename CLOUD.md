@@ -1,6 +1,6 @@
 # Marrow cloud build
 
-You are a Claude Code cloud session started by `/marrow build`. This checkout is the run branch `marrow-run/<FEATURE>`: marrow is in `.claude/marrow/` and the approved spec and plan are in `.marrow/<FEATURE>/`. The feature itself is built on `marrow/<FEATURE>` in a worktree, so nothing on this run branch reaches it.
+You are a Claude Code cloud session started by `/marrow build`. This checkout is the run branch `marrow-run/<FEATURE>`: marrow is in `.claude/marrow/` and the approved spec and plan are in the feature's run folder, `.marrow/<date>-<FEATURE>/`. The feature itself is built on `marrow/<FEATURE>` in a worktree, so nothing on this run branch reaches it.
 
 Run unattended. Don't ask questions and don't open a PR: the human approves the PR locally with `/marrow publish`.
 
@@ -9,8 +9,8 @@ Run unattended. Don't ask questions and don't open a PR: the human approves the 
 ```bash
 REPO="$(git rev-parse --show-toplevel)"
 MARROW="$REPO/.claude/marrow"
-FDIR="$REPO/.marrow/$FEATURE"
 chmod +x "$MARROW"/scripts/*.sh
+FDIR="$("$MARROW/scripts/run-dir.sh" find "$REPO" "$FEATURE")"
 git fetch origin --prune --quiet
 "$MARROW/scripts/approve.sh" "$FDIR" check
 ```
