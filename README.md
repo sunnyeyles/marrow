@@ -21,7 +21,7 @@ New to marrow? Start with the [user guide](docs/guide.md).
 ```
  you ── conversation ──▶ spec.md ──▶ spec critic ──▶ ✋ approve spec
                                                         │
-        planner ⇄ plan-check.sh ⇄ plan critic ◀─────────┘
+        scout ▶ planner ⇄ plan-check.sh ⇄ plan critic ◀─┘
                        │
                   ✋ approve plan
                        │   cloud-launch.sh pushes marrow-run/<feature>, starts `claude --cloud`
@@ -52,7 +52,7 @@ Each choice follows the research in `docs/research/` (three reports, about 130 s
 | Owned paths per ticket, parallel only when disjoint (and `"lanes": 1` in the plan for repos whose tests share a database or ports) | Parallel agents help only on independent work; one study measured 39–70% worse results on sequential tasks, and Cursor's peer agents stalled on locks. `plan-check.sh` serialises overlapping tickets. |
 | Two attempts plus a judge, only for hard tickets | Best-of-N with a separate verifier is one of the strongest SWE-bench techniques, and a hybrid execution-plus-LLM verifier beats either alone. It costs real tokens, so marrow spends them only where the planner flags risk. |
 | Fresh-context reviewers, then a skeptic that must cite code | Cognition, Factory and Anthropic converged on clean-context review plus a verify pass; LLM judges over-reject correct code, so refutation needs a citation and high findings survive doubt. |
-| A spec reviewer that hunts unwired features and weak tests | Practitioners report reviewers approving features that were built but never connected; the plan critic and spec reviewer both look for it. |
+| A spec reviewer that hunts unwired features and weak tests | Practitioners report reviewers approving features that were built but never connected; a scout maps where each criterion gets wired before planning, and the plan critic and spec reviewer both look for it. |
 | Cloud sessions, PR approval stays local | Disposable per-task VMs (Codex, Devin, Factory), agents that can't merge their own work, and human review as the real bottleneck. |
 | Lessons file fed by retros | Short, curated context beats auto-generated context, which lowered success and added over 20% cost in one study. |
 
@@ -87,7 +87,7 @@ Everything marrow writes in a repo is in `.marrow/` at its root, and each run is
 | File | Written by |
 | --- | --- |
 | `spec.md` | you and Claude, in the conversation |
-| `plan.json`, `plan.md` | the plan workflow |
+| `scout.json`, `plan.json`, `plan.md` | the plan workflow: the scout's map of the code, then the plan |
 | `approvals.json` | `approve.sh`: sha256 of the approved spec and plan; any later edit blocks the build |
 | `cloud.json`, `cloud.log` | `cloud-launch.sh` |
 | `build-args.json` | `build-args.sh`, for a build here |
@@ -131,11 +131,11 @@ When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit
 | Path | What |
 | --- | --- |
 | `skills/marrow/SKILL.md` | the `/marrow` command |
-| `agents/` | spec critic, planner, plan critic, test writer, implementer, judge, four reviewers, skeptic, git-sync, runner; the Spec and Standards reviewers are adapted from mattpocock's `code-review` skill; the UI reviewer runs only when the diff touches UI files (`ui-files.sh`: components and styles, plus `.ts`, `.js` and `package.json` in a package that depends on a UI framework) |
+| `agents/` | spec critic, scout, planner, plan critic, test writer, implementer, judge, four reviewers, skeptic, git-sync, runner; the Spec and Standards reviewers are adapted from mattpocock's `code-review` skill; the UI reviewer runs only when the diff touches UI files (`ui-files.sh`: components and styles, plus `.ts`, `.js` and `package.json` in a package that depends on a UI framework) |
 | `workflows/plan.js`, `build.js`, `review.js` | the Workflow scripts |
 | `CLOUD.md` | what the cloud session does |
 | `templates/spec.md`, `notes.md` | the spec and repo-notes skeletons |
-| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane`, `test-checks`, `ui-files`, `test-ui-files`, `risk-labels`, `pr-labels`, `test-risk-labels` |
+| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane`, `test-checks`, `ui-files`, `test-ui-files`, `test-plan-check`, `risk-labels`, `pr-labels`, `test-risk-labels` |
 | `references/vercel-react/` | Vercel's React and Next.js performance rules (MIT), copied in; the UI reviewer carries their index and reads a rule before citing it. `SOURCE.md` says how to update them |
 | `skills/codebase-design/` | mattpocock's deep-module skill (MIT), preloaded by the planner, implementer and Standards reviewer |
 | `lessons.md` | lessons from `/marrow retro` that hold in any repo, read by every agent |

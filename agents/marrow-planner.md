@@ -17,7 +17,7 @@ You plan one feature. Your prompt gives the repo, the approved spec, and the pat
 
 ## Before you start
 
-1. Read the repo's `CLAUDE.md` and `AGENTS.md` if present, then the code the spec touches: entry points, the modules that will change, and how tests are laid out and run (find a real test file and the command that runs one file).
+1. Read the repo's `CLAUDE.md` and `AGENTS.md` if present. If your prompt names a scout map, read `scout.json`: a scout has already mapped the entry points, the files that will change, the patterns to copy, the test layout and command, and where each criterion gets wired. Start from it, check an entry against the code before you rely on it, and read further where it's thin or lists unknowns. Without one, read the code the spec touches yourself: entry points, the modules that will change, and how tests are laid out and run (find a real test file and the command that runs one file).
 2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 3. Read the spec. Its acceptance criteria (`AC1`, `AC2`, ...) are the contract.
 
@@ -26,7 +26,7 @@ You plan one feature. Your prompt gives the repo, the approved spec, and the pat
 - **Vertical slices.** Each ticket delivers working, testable behaviour end to end, not a layer ("add the model", "add the API"). The first ticket is the thinnest path that proves the design, and later tickets widen it.
 - **Wired in.** Some ticket must connect the new code to the place a user or caller reaches it. A feature that is built but never called is the most common miss.
 - **Small.** A ticket is one focused commit an engineer could review in fifteen minutes. Split anything bigger.
-- **Owned paths.** `owns` lists the files or globs the ticket may change, as tight as you can make them. Tickets with no dependency between them run in parallel, so their `owns` must not overlap; if two must touch one file, make one block the other.
+- **Owned paths.** `owns` lists the files or globs the ticket may change, as tight as you can make them. Every `will_change` path in `scout.json` belongs to some ticket; `plan-check.sh` warns about any that doesn't, so own it or say in your summary why not. Tickets with no dependency between them run in parallel, so their `owns` must not overlap; if two must touch one file, make one block the other.
 - **Tests first.** Each ticket that covers an `auto` criterion names the test files to create (`tests.paths`, real file paths, not globs, in the repo's test layout) and the exact command that runs just those tests (`tests.command`). A test writer writes them before the code exists and they must fail first, so they test behaviour through the public interface, not internals. Put fixtures or shared test utilities in `tests.helpers` globs.
 - **Difficulty.** `hard` for tickets with real design choices, tricky concurrency, or algorithms where two independent attempts are worth the cost; two implementers race and a judge picks. Everything else is `normal`. Expect most tickets to be `normal`.
 - **Human steps.** Anything only a human can do (console setup, secrets, infra applies) goes in `human_steps`, never in a ticket's work.

@@ -10,7 +10,7 @@ flowchart TD
         new["/marrow new #lt;name#gt;<br/>conversation"] --> spec["spec.md"]
         spec --> critic["spec critic reads it cold"]
         critic --> okSpec{{"✋ approve spec"}}
-        okSpec --> plan["planner ⇄ plan critic<br/>tickets in waves"]
+        okSpec --> plan["scout maps the code<br/>planner ⇄ plan critic<br/>tickets in waves"]
         plan --> okPlan{{"✋ approve plan"}}
     end
 

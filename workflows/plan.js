@@ -3,6 +3,7 @@ export const meta = {
   description: 'Turn an approved spec into a checked, critiqued plan of tickets',
   whenToUse: 'Started by /marrow after the spec is approved; not for direct use',
   phases: [
+    { title: 'Scout', detail: 'marrow-scout maps the code the spec touches into scout.json' },
     { title: 'Plan', detail: 'marrow-planner writes plan.json' },
     { title: 'Check', detail: 'plan-check.sh: coverage, dependencies, ownership, waves' },
     { title: 'Critique', detail: 'marrow-plan-critic reads the plan cold against the spec and code' },
@@ -15,6 +16,7 @@ for (const k of ['feature', 'repoPath', 'featureDir', 'specPath', 'marrowDir']) 
   if (!A[k] || typeof A[k] !== 'string') throw new Error(`marrow-plan: missing args.${k}`)
 }
 const PLAN = `${A.featureDir}/plan.json`
+const SCOUT = `${A.featureDir}/scout.json`
 const MAX_REVISIONS = 2
 
 const RUN_SCHEMA = {
@@ -24,6 +26,17 @@ const RUN_SCHEMA = {
     stdout_json: { type: 'string', description: 'what the command printed on stdout, verbatim' },
   },
   required: ['exit_code', 'stdout_json'],
+}
+const SCOUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    entry_points: { type: 'integer' },
+    will_change: { type: 'integer' },
+    tests_proven: { type: 'boolean', description: 'whether the single-file test command ran' },
+    summary: { type: 'string' },
+    unknowns: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['entry_points', 'will_change', 'tests_proven', 'summary'],
 }
 const PLANNER_SCHEMA = {
   type: 'object',
@@ -65,6 +78,13 @@ const context = [
   `Repo notes: ${A.repoPath}/.marrow/notes.md`,
 ].join('\n')
 
+// The map is a head start, not a gate: without it the planner and critic explore on their own.
+const scout = await agent(
+  [context, `Scout map: ${SCOUT}`, '', 'Map the code this spec touches and write scout.json, following your instructions.'].join('\n'),
+  { agentType: 'marrow-scout', schema: SCOUT_SCHEMA, phase: 'Scout', label: 'scout' })
+log(scout ? `scout: ${scout.will_change} file(s) to change, tests ${scout.tests_proven ? 'proven' : 'not proven'}` : 'scout failed; planning without a map')
+const withMap = scout ? `${context}\nScout map: ${SCOUT}` : context
+
 async function check(round) {
   const r = await agent(
     [`Run this one command and report it:`, '', `"${A.marrowDir}/scripts/plan-check.sh" "${A.featureDir}"`, '',
@@ -78,7 +98,7 @@ async function check(round) {
 }
 
 let planner = await agent(
-  [context, '', 'Write plan.json for this spec, following your instructions, then run plan-check.sh and fix what it reports.'].join('\n'),
+  [withMap, '', 'Write plan.json for this spec, following your instructions, then run plan-check.sh and fix what it reports.'].join('\n'),
   { agentType: 'marrow-planner', schema: PLANNER_SCHEMA, phase: 'Plan', label: 'planner' })
 
 let checked = await check(0)
@@ -86,14 +106,14 @@ let critique = { findings: [] }
 for (let round = 1; round <= MAX_REVISIONS + 1; round++) {
   critique = checked.ok
     ? (await agent(
-      [context, '', 'Review plan.json against the spec and the code. A deterministic check passed:', JSON.stringify(checked, null, 1)].join('\n'),
+      [withMap, '', 'Review plan.json against the spec and the code. A deterministic check passed:', JSON.stringify(checked, null, 1)].join('\n'),
       { agentType: 'marrow-plan-critic', schema: CRITIC_SCHEMA, phase: 'Critique', label: `critic ${round}` })) || { findings: [] }
     : { findings: [] }
   const blocking = critique.findings.filter(f => f.severity !== 'low')
   log(`round ${round}: plan-check ${checked.ok ? 'ok' : `${checked.errors.length} error(s)`}, critic ${blocking.length} high/medium`)
   if ((checked.ok && !blocking.length) || round > MAX_REVISIONS) break
   planner = await agent(
-    [context, '', `Revise plan.json (revision ${round} of ${MAX_REVISIONS}).`,
+    [withMap, '', `Revise plan.json (revision ${round} of ${MAX_REVISIONS}).`,
       checked.ok ? '' : `plan-check.sh errors:\n${checked.errors.map(e => `- ${e}`).join('\n')}`,
       blocking.length ? `Critic findings to address (fix them in the plan, or say in questionable why not):\n${JSON.stringify(blocking, null, 1)}` : '',
       'Change only what these need, then run plan-check.sh again.'].join('\n'),
@@ -109,6 +129,7 @@ const md = await agent(
 return {
   ok: !!checked.ok,
   check: checked,
+  scout: scout || null,
   planner: planner || null,
   open_findings: critique.findings,
   plan_markdown: md ? md.stdout_json : '',

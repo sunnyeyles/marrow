@@ -134,7 +134,7 @@ Ask: "Approve this spec?" Only an explicit yes counts. Then `"$MARROW/scripts/ap
 
 Call the Workflow tool with `scriptPath` `$MARROW/workflows/plan.js` and `args` `{ "feature": "<feature>", "repoPath": "$REPO", "featureDir": "$FDIR", "specPath": "$FDIR/spec.md", "marrowDir": "$MARROW" }` (absolute paths, a JSON object). Write `plan_markdown` to `$FDIR/plan.md`.
 
-Show the user the plan: waves, each ticket's title, criteria, owned paths and difficulty, plus any open critic findings and warnings. Point them at `$FDIR/plan.md` for detail. Take their changes by editing `$FDIR/plan.json` directly (re-run `plan-check.sh "$FDIR"` and regenerate `plan.md` with `--markdown`), or re-run the plan workflow for big changes.
+Show the user the plan: waves, each ticket's title, criteria, owned paths and difficulty, plus any open critic findings and warnings, including files the scout says will change that no ticket owns. Point them at `$FDIR/plan.md` for detail. Take their changes by editing `$FDIR/plan.json` directly (re-run `plan-check.sh "$FDIR"` and regenerate `plan.md` with `--markdown`), or re-run the plan workflow for big changes.
 
 ### 7. Plan approval
 

@@ -20,6 +20,10 @@
 # helper paths may overlap never share a wave (the later one moves down, with
 # a warning). An optional top-level "lanes" (1-3, default 3) caps parallel
 # tickets, for repos whose tests share a database or ports.
+#
+# If the feature dir has a scout.json (marrow-scout's map of the code), each
+# of its will_change paths that no ticket's owned or test paths cover is a
+# warning, never an error, and --markdown adds a Scout section.
 # Exit 0 when ok, 1 with "errors", 2 on misuse.
 set -euo pipefail
 
@@ -176,6 +180,24 @@ for tid in pending:
     placed[tid] = w
 waves = [w for w in waves if w]
 
+# The scout's map is advisory: files it says will change that no ticket covers.
+scout, unowned = None, []
+scout_path = os.path.join(fdir, "scout.json")
+if os.path.exists(scout_path):
+    try:
+        scout = json.load(open(scout_path))
+        if not isinstance(scout, dict):
+            raise ValueError("not an object")
+    except Exception as exc:
+        warnings.append("cannot read scout.json: %s" % exc)
+        scout = None
+if scout:
+    for c in scout.get("will_change") or []:
+        p = c.get("path") if isinstance(c, dict) else None
+        if p and not any(overlap([p], touches(t)) for t in tickets.values()):
+            unowned.append(p)
+            warnings.append("scout.json says %s will change, but no ticket owns it" % p)
+
 if mode == "--markdown":
     md = ["# Plan: %s" % plan.get("feature", os.path.basename(fdir)), ""]
     md.append("Waves (tickets in a wave run in parallel): " + " → ".join("[" + ", ".join(w) + "]" for w in waves))
@@ -207,6 +229,16 @@ if mode == "--markdown":
             md.append("- Human step: %s" % h)
         if t.get("notes"):
             md.append("- Notes: %s" % t["notes"])
+    if scout:
+        md += ["", "## Scout", ""]
+        for e in scout.get("entry_points") or []:
+            if isinstance(e, dict) and e.get("path"):
+                where = "%s:%s" % (e["path"], e["line"]) if e.get("line") else e["path"]
+                md.append("- Entry point: `%s`%s" % (where, " (%s)" % e["why"] if e.get("why") else ""))
+        for p in unowned:
+            md.append("- Unowned: `%s`" % p)
+        for u in scout.get("unknowns") or []:
+            md.append("- Unknown: %s" % u)
     if warnings:
         md += ["", "## Warnings", ""] + ["- %s" % w for w in warnings]
     print("\n".join(md))
