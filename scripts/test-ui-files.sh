@@ -56,13 +56,13 @@ git -C "$R" add -A
 git -C "$R" commit -q -m packages
 PKGS="$(git -C "$R" rev-parse HEAD)"
 touch "$R/web/src/hooks/useCart.ts" "$R/web/lib/api.ts" "$R/web/next.config.mjs" "$R/web/lib/api.test.ts" \
-  "$R/web/src/Cart.stories.ts" "$R/web/e2e/cart.ts" "$R/api/src/server.ts"
+  "$R/web/src/Cart.stories.ts" "$R/web/e2e/cart.ts" "$R/web/playwright.config.ts" "$R/api/src/server.ts"
 echo '{"dependencies": {"express": "5.1.0"}}' >"$R/api/package.json"
 echo '{"dependencies": {"next": "15.1.0", "react": "19.0.0"}}' >"$R/web/package.json"
 git -C "$R" add -A
 git -C "$R" commit -q -m scripts
 SCRIPTS="$(git -C "$R" rev-parse HEAD)"
-ok "in a UI package it lists .ts, .mjs and package.json, not tests, stories or e2e" \
+ok "in a UI package it lists .ts, .mjs and package.json, not tests, stories, e2e or test configs" \
   is "$("$S/ui-files.sh" "$R" "$PKGS" "$SCRIPTS" | jq -c .files)" '["web/lib/api.ts","web/next.config.mjs","web/package.json","web/src/hooks/useCart.ts"]'
 
 ok "it refuses missing arguments" not "$S/ui-files.sh" "$R" "$BASE"

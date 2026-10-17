@@ -8,9 +8,10 @@
 # UI files are .jsx .tsx .vue .svelte .astro .mdx .html .css .scss .sass .less,
 # plus .ts .js .mts .mjs .cts .cjs files and package.json in a UI package: one
 # whose nearest package.json (at <head>) depends on a UI framework, such as
-# react, next or vue. Tests, stories and mocks there don't count, and neither
-# do deleted files. Prints {"ok": true, "files": [...]} with paths relative
-# to the repo root. Exit 0 listed (the list may be empty), 1 failed.
+# react, next or vue. Tests, stories, mocks and test-runner configs there
+# don't count, and neither do deleted files. Prints {"ok": true, "files":
+# [...]} with paths relative to the repo root. Exit 0 listed (the list may be
+# empty), 1 failed.
 set -euo pipefail
 
 WT="${1:-}" BASE="${2:-}" HEAD="${3:-}"
@@ -21,7 +22,7 @@ fi
 
 UI_EXT='\.(jsx|tsx|vue|svelte|astro|mdx|html|css|scss|sass|less)$'
 SCRIPT_EXT='(\.(ts|js|mts|mjs|cts|cjs)|(^|/)package\.json)$'
-NOT_UI='\.(test|spec|stories)\.|(^|/)(__tests__|__mocks__|e2e)/'
+NOT_UI='\.(test|spec|stories)\.|(^|/)(__tests__|__mocks__|e2e)/|(^|/)(playwright|vitest|jest|cypress)\.config\.'
 FRAMEWORKS='["react","next","vue","nuxt","svelte","@sveltejs/kit","solid-js","preact","astro","@angular/core","@remix-run/react"]'
 
 # ui_package <dir>: the nearest package.json at or above <dir> depends on a UI framework.
