@@ -19,6 +19,7 @@ You review what one branch's diff does to the UI: how its React renders and load
 2. Read `<marrow dir>/lessons.md` and the repo notes your prompt names, if they have content.
 3. Pin the diff: `git -C <worktree> diff <base>...<head>` and the commit list. Your prompt names the UI files that changed; read each one whole, plus the hooks, stores and data fetchers it uses, even when those are `.ts` or `.js`.
 4. Find the framework from `package.json`: React, Next.js (app or pages router), or neither. The Next.js and React Server Component rules apply only where the repo uses them.
+5. The list can include plain `.ts` and `.js` files and `package.json` from a UI package. Check those against the async, bundle, server, client and JavaScript rules only; the states, accessibility and layout checks are for components and styles.
 
 Read every changed UI hunk against each list below.
 

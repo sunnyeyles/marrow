@@ -125,7 +125,7 @@ When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit
 | Path | What |
 | --- | --- |
 | `skills/marrow/SKILL.md` | the `/marrow` command |
-| `agents/` | spec critic, planner, plan critic, test writer, implementer, judge, four reviewers, skeptic, git-sync, runner; the Spec and Standards reviewers are adapted from mattpocock's `code-review` skill; the UI reviewer runs only when the diff touches UI files (`ui-files.sh`) |
+| `agents/` | spec critic, planner, plan critic, test writer, implementer, judge, four reviewers, skeptic, git-sync, runner; the Spec and Standards reviewers are adapted from mattpocock's `code-review` skill; the UI reviewer runs only when the diff touches UI files (`ui-files.sh`: components and styles, plus `.ts`, `.js` and `package.json` in a package that depends on a UI framework) |
 | `workflows/plan.js`, `build.js`, `review.js` | the Workflow scripts |
 | `CLOUD.md` | what the cloud session does |
 | `templates/spec.md`, `notes.md` | the spec and repo-notes skeletons |
