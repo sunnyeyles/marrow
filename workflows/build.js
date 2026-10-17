@@ -226,7 +226,7 @@ function ticketBrief(t) {
 const res = {
   status: 'blocked', why: '', base: '', head: '', tickets: {}, waves: [], reviewers: null, checks: null,
   open: [], refuted: [], fixed: [], rounds: 0, human_steps: [], notes: [], conflicts: [], ledger: null,
-  final: null, pushed: false,
+  final: null, pushed: false, risk: null,
 }
 for (const t of A.tickets) {
   res.tickets[t.id] = { id: t.id, title: t.title, status: 'pending', difficulty: t.difficulty || 'normal', notes: [], attempts: [], judge: null, tests_commit: '', merged: false }
@@ -586,6 +586,10 @@ async function finalize() {
   const built = merged().map(t => res.tickets[t.id].tests_commit ? `${t.id}:${res.tickets[t.id].tests_commit}` : t.id).join(',')
   res.ledger = await sh(`"${S}/ledger.sh" ${q(R.worktree)} ${q(A.planPath)} ${built}`, 'acceptance ledger', 'Finalize')
   await sh(`"${S}/lane.sh" lock ${q(R.worktree)} '{}'`, 'unlock', 'Finalize')
+  // Deploy-risk labels from fixed rules; /marrow publish puts them on the PR. A failure here is a note, not red.
+  const risk = await sh(`"${S}/risk-labels.sh" ${q(R.worktree)} ${q(res.base)} ${q(res.head)}`, 'risk labels', 'Finalize')
+  if (risk && risk.ok === true) res.risk = risk.labels || []
+  else res.notes.push(`risk labels did not run: ${(risk && risk.error) || 'no result'}`)
 
   const why = []
   if (!res.ledger || !Array.isArray(res.ledger.criteria)) why.push('the acceptance ledger did not run')
@@ -606,6 +610,9 @@ async function finalize() {
     res.fixed.length ? `Fixed in the review loop: ${res.fixed.length}.` : '',
     res.conflicts.length ? `Conflicts resolved: ${res.conflicts.join(', ')}` : '',
     res.human_steps.length ? `Human steps:\n${res.human_steps.map(s => `- ${s}`).join('\n')}` : 'Human steps: none.',
+    res.risk === null ? 'Deploy risk: the labels did not run; leave the section out.'
+      : res.risk.length ? `Deploy risk labels (write the Deploy risk section from these):\n${res.risk.map(l => `- ${l.name}: ${l.items.map(i => `${i.key} (${i.file})${i.note ? ` [${i.note}]` : ''}`).join('; ')}`).join('\n')}`
+        : 'Deploy risk labels: none.',
     `Implementer notes:\n${A.tickets.flatMap(t => res.tickets[t.id].notes.map(n => `- ${t.id}: ${n}`)).join('\n')}`,
   ].filter(Boolean).join('\n\n')
   const pushNote = A.push === false ? 'Do steps 4 and 5 only: a local build, so no push.' : 'Do steps 3 to 5. The branch is already up to date with the base: skip steps 1 and 2.'
@@ -636,6 +643,7 @@ md.push(`# Build: ${A.feature}`, '')
 md.push(`- Status: **${res.status}**${res.why ? ` (${res.why})` : ''}`)
 md.push(`- Branch: \`${R.branch}\`${res.pushed ? ' (pushed)' : ' (not pushed)'}; base \`${res.base}\`, head \`${res.head}\``)
 md.push(`- Checks: ${checksLine(res.checks)}`)
+if (res.risk) md.push(`- Deploy risk labels: ${res.risk.length ? res.risk.map(l => `${l.name} (${l.items.map(i => i.key).join(', ')})`).join('; ') : 'none'}`)
 md.push(`- Open findings: ${res.open.length} (${highCount(res.open)} high); fixed ${res.fixed.length}; refuted ${res.refuted.length}`)
 md.push(`- Waves: ${res.waves.map(w => `[${w.tickets.join(', ')}]${w.checks ? ` checks ${w.checks}` : ''}`).join(' → ')}`)
 if (res.rounds) md.push(`- Review fix rounds: ${res.rounds}`)
@@ -705,6 +713,7 @@ return {
     tickets: A.tickets.map(t => ({ id: t.id, status: res.tickets[t.id].status })),
     criteria: ((res.ledger && res.ledger.criteria) || []).map(c => ({ id: c.id, status: c.status })),
     human_steps: res.human_steps.length,
+    labels: (res.risk || []).map(l => l.name),
   },
   ledger: res.ledger,
   pr: res.final && res.final.pr_title ? { title: res.final.pr_title, body: res.final.pr_body || '' } : null,

@@ -197,8 +197,9 @@ Running this is the user's approval to publish. If `result.json` status isn't `g
 2. Split `$FDIR/pr.md` into the title (its `# ` line) and the body (the rest, written to a temp file).
 3. `"$MARROW/scripts/pr-guard.sh" "$REPO" "<title>" <body file> "origin/$BASE_BRANCH" "origin/marrow/<feature>"`. Exit 1: fix the title or body and re-run; a hit in a commit stops publishing, and you name the commit.
 4. `gh pr create --base "$BASE_BRANCH" --head marrow/<feature> --title "<title>" --body-file <body file>`. If one is already open for that head, `gh pr edit` it instead.
-5. Write `{"pr": "<url>", "at": "<date -u>"}` to `$FDIR/published.json`. For a cloud build, delete the run branch: `git -C "$REPO" push origin --delete marrow-run/<feature>`.
-6. Give the user the PR link. Mention `/marrow retro <feature>` once the PR has had review.
+5. Label it with the deploy risks: `"$MARROW/scripts/pr-labels.sh" "$REPO" <url> "origin/$BASE_BRANCH" "origin/marrow/<feature>"`. It creates any label the GitHub repo lacks and only ever adds labels. If it fails, say so and go on: the PR is already open.
+6. Write `{"pr": "<url>", "at": "<date -u>", "labels": <its labels, or []>}` to `$FDIR/published.json`. For a cloud build, delete the run branch: `git -C "$REPO" push origin --delete marrow-run/<feature>`.
+7. Give the user the PR link and its labels. Mention `/marrow retro <feature>` once the PR has had review.
 
 Never merge the PR.
 

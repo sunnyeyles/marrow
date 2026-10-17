@@ -30,12 +30,12 @@ A software factory for Claude Code. You talk through a feature, approve a spec a
  │   implementer (hard tickets: two attempts + judge) → green check           │
  │   merge into marrow/<feature>; integration checks between waves            │
  │ checks ∥ standards, spec, bugs, ui reviewers → skeptic → 2 fix rounds max  │
- │ merge in origin/<base> → acceptance ledger → push marrow/<feature> → PR    │
+ │ merge in origin/<base> → ledger → risk labels → push marrow/<feature> → PR │
  │ report pushed to marrow-run/<feature>                                      │
  └────────────────────────────────────────────────────────────────────────────┘
                        │   cloud-status.sh notices the report
                        ▼
-                 ✋ /marrow publish ──▶ PR (never merged by marrow)
+                 ✋ /marrow publish ──▶ labelled PR (never merged by marrow)
 ```
 
 ## Why it's built this way
@@ -90,7 +90,7 @@ Everything marrow writes in a repo is in `.marrow/` at its root, and each run is
 | `cloud.json`, `cloud.log` | `cloud-launch.sh` |
 | `build-args.json` | `build-args.sh`, for a build here |
 | `report.md`, `agent-log.md`, `pr.md`, `ledger.json`, `result.json`, `feature.bundle` | the build |
-| `published.json` | `/marrow publish` |
+| `published.json` | `/marrow publish`: the PR's URL and its deploy-risk labels |
 
 A review run holds `report.md` and `agent-log.md`. `runs.sh` works out each run's stage from its files (started, spec drafted or approved, plan drafted or approved, either changed since approval, building, built, published; reviewing or reviewed) and rewrites `README.md`. The scripts that move a run on rerun it, and `/marrow runs` shows the same table.
 
@@ -116,6 +116,10 @@ Older marrow kept a run in `.marrow/<feature>/`: once its build has reported (a 
 
 The guard is a fast path against mistakes, not a sandbox. The real gates run outside the agents: `verify-ticket.sh` after every attempt, the checks, and `ledger.sh`, which reruns every ticket's acceptance tests at the end and marks a criterion `tampered` if its test files changed after they were locked. `scripts/test-guard.sh` holds the guard's regression tests.
 
+## Deploy-risk labels
+
+`scripts/risk-labels.sh` reads the branch's diff with fixed rules, not a model: `needs-env` for a new env var read in code, set in a `.env*` file or listed in compose or k8s YAML; `needs-secret` for a new `secretKeyRef`, `--set-secrets`, `gcloud secrets create` or GitHub workflow secret; `db-migration` for a changed migration; `destructive-migration` for a DROP, RENAME, column type change, TRUNCATE or DELETE in an up migration. A name the diff also removes moved, so it isn't new. The build gives the labels to git-sync, which writes a **Deploy risk** section in the PR body with a `?` for each thing a human must answer, and `/marrow publish` puts them on the PR with `pr-labels.sh`, creating any the repo lacks with unj-pr's colours. `scripts/test-risk-labels.sh` tests both against scratch diffs and a fake `gh`.
+
 ## Commit diffs in cmux
 
 When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit the test writer or implementer makes opens in `cmux diff`, titled with its short SHA and subject. The first opens a new "Commit diffs" workspace in the sidebar; each later one is a new tab in it. Close the workspace and the next commit starts a fresh one. `scripts/commit-diff.sh` is a PostToolUse hook on those two agents. Outside cmux, including cloud sessions, it does nothing. `scripts/test-commit-diff.sh` tests it against a fake `cmux`.
@@ -129,7 +133,7 @@ When a build runs in a [cmux](https://cmux.com) terminal (`--here`), each commit
 | `workflows/plan.js`, `build.js`, `review.js` | the Workflow scripts |
 | `CLOUD.md` | what the cloud session does |
 | `templates/spec.md`, `notes.md` | the spec and repo-notes skeletons |
-| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane`, `test-checks`, `ui-files`, `test-ui-files` |
+| `scripts/` | `run-dir`, `runs`, `approve`, `plan-check`, `build-args`, `lane`, `verify-ticket`, `ledger`, `checks`, `run-checks`, `cloud-launch`, `cloud-status`, `guard`, `pr-guard`, `test-guard`, `commit-diff`, `test-commit-diff`, `test-runs`, `test-lane`, `test-checks`, `ui-files`, `test-ui-files`, `risk-labels`, `pr-labels`, `test-risk-labels` |
 | `references/vercel-react/` | Vercel's React and Next.js performance rules (MIT), copied in; the UI reviewer carries their index and reads a rule before citing it. `SOURCE.md` says how to update them |
 | `skills/codebase-design/` | mattpocock's deep-module skill (MIT), preloaded by the planner, implementer and Standards reviewer |
 | `lessons.md` | lessons from `/marrow retro` that hold in any repo, read by every agent |

@@ -46,6 +46,11 @@ A `lane.sh merge` left a merge in progress in `<worktree>`. Resolve it as above 
    - **Evidence:** the check steps and results, as given.
    - **Risk:** one-way or two-way door and the blast radius in a line; every open review finding given to you with its severity; any conflicts that were resolved.
    - **Manual steps:** the human steps, if any.
+   - **Deploy risk:** only when your prompt lists deploy risk labels. One `###` subsection per label, each listing its items with their files. Fill in what the diff tells you and leave `?` for what only a human knows:
+     - `needs-env`: a table `Name | local | test | prod | Who sets it`, one row per variable.
+     - `needs-secret`: a table `Secret | test | prod | Who creates it`.
+     - `db-migration`: "Additive and rollback-safe: ?", "Locks or long runs on large tables: ?", then the files with any note given.
+     - `destructive-migration`: "The release that stopped using this is in prod: ?", "Data to back up first: ?", then the statements.
 5. Run `<marrow dir>/scripts/pr-guard.sh <worktree> "<title>" <feature dir>/pr.md origin/<base>`. Exit 1: fix the title or body if that's where the hit is and re-run; if it's in a commit, return `blocked` and name the commit, leaving the commits as they are.
 
 ## Output
