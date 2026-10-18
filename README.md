@@ -1,5 +1,7 @@
 # Marrow
 
+![Marrow: from idea to a tested, reviewed pull request](docs/marrow.png)
+
 A software factory for Claude Code. You talk through a feature, approve a spec and a plan, and marrow builds it unattended in a Claude Code cloud session. It writes tests first, keeps them locked, checks every ticket outside the agent that did it, and reviews the result adversarially. You approve the PR at the end.
 
 New to marrow? Start with the [user guide](docs/guide.md).
