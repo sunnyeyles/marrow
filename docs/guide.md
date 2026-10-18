@@ -1,5 +1,7 @@
 # Using marrow
 
+![Marrow: from idea to a tested, reviewed pull request](marrow.png)
+
 Marrow turns a conversation into a reviewed, tested PR. You approve the spec, the plan and the PR; everything in between runs unattended, by default in a Claude Code cloud session. For the design rationale, see the [README](../README.md).
 
 ```mermaid
