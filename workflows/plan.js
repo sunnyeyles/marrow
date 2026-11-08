@@ -106,6 +106,16 @@ const md = await agent(
     'Put the exit code in exit_code and what it printed on stdout in stdout_json, exactly as printed.'].join('\n'),
   { agentType: 'marrow-runner', effort: 'low', schema: RUN_SCHEMA, phase: 'Check', label: 'render plan' })
 
+// Best effort: this session's transcripts into <run>/trace/ for lintcat's run-trace viewer.
+try {
+  await agent(
+    [`Run this one command and report it:`, '', `"${A.marrowDir}/scripts/trace.sh" "${A.featureDir}"`, '',
+      'Put the exit code in exit_code and what it printed on stdout in stdout_json, exactly as printed. Whatever it prints, do nothing else.'].join('\n'),
+    { agentType: 'marrow-runner', effort: 'low', schema: RUN_SCHEMA, phase: 'Check', label: 'save trace' })
+} catch (e) {
+  log(`save trace: ${e && e.message ? e.message : e}`)
+}
+
 return {
   ok: !!checked.ok,
   check: checked,

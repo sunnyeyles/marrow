@@ -45,6 +45,12 @@ Also bundle the feature branch, in case the push of `marrow/$FEATURE` was refuse
 git bundle create "$FDIR/feature.bundle" "marrow/$FEATURE" "^origin/<base branch>" 2>/dev/null || true
 ```
 
+Refresh the session's transcripts in `$FDIR/trace/` (the workflow saved them at Finalize; this adds the rest). It never fails:
+
+```bash
+"$MARROW/scripts/trace.sh" "$FDIR" >/dev/null || true
+```
+
 Then:
 
 ```bash

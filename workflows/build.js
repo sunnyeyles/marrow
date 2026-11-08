@@ -634,6 +634,14 @@ if (int.ok && merged().length) {
   res.why = res.why || 'no ticket merged'
 }
 
+// Best effort: this session's transcripts into <run>/trace/ for lintcat's run-trace viewer. Never changes the status.
+try {
+  const tr = await sh(`"${S}/trace.sh" ${q(A.featureDir)}`, 'save trace', 'Finalize')
+  if (!tr || tr.ok !== true) res.notes.push(`trace not saved: ${(tr && (tr.warning || tr.error)) || 'no result'}`)
+} catch (e) {
+  res.notes.push(`trace not saved: ${e && e.message ? e.message : e}`)
+}
+
 // ---- report ----
 
 const SEV = { high: 0, medium: 1, low: 2 }

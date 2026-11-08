@@ -176,7 +176,7 @@ rm -f "$FDIR/cloud.json"   # a build here now, not a cloud one
   mv "$FDIR/build-args.json.tmp" "$FDIR/build-args.json"
 ```
 
-Call the Workflow tool with `scriptPath` `$MARROW/workflows/build.js` and `args` set to that JSON (an object). Resume a killed run with `resumeFromRunId`. Write the outputs as `CLOUD.md` step 4 describes (`report.md`, `agent-log.md`, `pr.md`, `ledger.json`, `result.json`, all in `$FDIR`), skipping its git commands. Then do `status`.
+Call the Workflow tool with `scriptPath` `$MARROW/workflows/build.js` and `args` set to that JSON (an object). Resume a killed run with `resumeFromRunId`. Write the outputs as `CLOUD.md` step 4 describes (`report.md`, `agent-log.md`, `pr.md`, `ledger.json`, `result.json`, all in `$FDIR`, then `trace.sh`), skipping its git commands. Then do `status`.
 
 ## `status <feature>`
 
@@ -211,7 +211,7 @@ Reviews one branch, read-only. Nothing is pushed or opened.
 2. `git -C "$REPO" fetch origin --prune --quiet`. Use the local branch if it exists, else `origin/<branch>`; record `HEAD_SHA`.
 3. Slug: the branch with every character outside `A-Za-z0-9._-` replaced by `-`. Make or reuse two detached worktrees at `HEAD_SHA`, `$REPO/.claude/worktrees/marrow-review-<slug>` (read by reviewers) and `marrow-checks-<slug>` (builds and tests), each with `"$MARROW/scripts/lane.sh" detach "$REPO" <path> "$HEAD_SHA"`. It refuses a dirty one; stop then.
 4. `BASE="$(git -C <review worktree> merge-base "origin/$BASE_BRANCH" HEAD)"`. An empty diff stops here. List its UI files with `"$MARROW/scripts/ui-files.sh" <review worktree> "$BASE" "$HEAD_SHA"`; with none, the UI reviewer is skipped.
-5. Start the run folder, `RDIR="$("$MARROW/scripts/run-dir.sh" review "$REPO" "<branch>")"`, then the workflow: `scriptPath` `$MARROW/workflows/review.js`, `args` `{ "repoPath", "branch", "worktree", "checksWorktree", "base", "head", "baseBranch", "specPath" (or null), "marrowDir", "uiFiles" (its `files` array) }`.
+5. Start the run folder, `RDIR="$("$MARROW/scripts/run-dir.sh" review "$REPO" "<branch>")"`, then the workflow: `scriptPath` `$MARROW/workflows/review.js`, `args` `{ "repoPath", "branch", "worktree", "checksWorktree", "base", "head", "baseBranch", "specPath" (or null), "marrowDir", "uiFiles" (its `files` array), "runDir": "$RDIR" }`.
 6. Write `markdown` to `$RDIR/report.md` (first line `Reviewed <branch> <date>, run <runId>.`) and `agentLogMarkdown` beside it; append `checks.failures` with `cat` if set. Tell the user: report path, checks, open findings by severity with the high ones named, incomplete reviewers.
 
 ## `retro <feature>`

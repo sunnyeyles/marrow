@@ -9,7 +9,7 @@ export const meta = {
   ],
 }
 
-// args: { repoPath, branch, worktree, checksWorktree, base, head, baseBranch, specPath (absolute or null), marrowDir, uiFiles (ui-files.sh's list) }
+// args: { repoPath, branch, worktree, checksWorktree, base, head, baseBranch, specPath (absolute or null), marrowDir, uiFiles (ui-files.sh's list), runDir (optional: the run folder, for trace/) }
 const A = args || {}
 for (const k of ['repoPath', 'branch', 'worktree', 'checksWorktree', 'base', 'head', 'marrowDir']) {
   if (!A[k] || typeof A[k] !== 'string') throw new Error(`marrow-review: missing args.${k}`)
@@ -229,6 +229,18 @@ for (const f of rv.all) {
   else open.push(withV)
 }
 const openHigh = open.filter(f => f.severity === 'high')
+
+// Best effort: this session's transcripts into <run>/trace/ for lintcat's run-trace viewer.
+if (typeof A.runDir === 'string' && A.runDir.startsWith('/')) {
+  try {
+    await logged(
+      [`Run this one command and report it:`, '', `"${SCRIPTS}/trace.sh" "${A.runDir}"`, '',
+        'Put the exit code in exit_code and what it printed on stdout in stdout_json, exactly as printed. Whatever it prints, do nothing else.'].join('\n'),
+      { agentType: 'marrow-runner', effort: 'low', schema: RUN_SCHEMA, phase: 'Skeptic', label: 'save trace' })
+  } catch (e) {
+    log(`save trace: ${e && e.message ? e.message : e}`)
+  }
+}
 
 // ---- report ----
 

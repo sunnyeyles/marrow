@@ -111,6 +111,10 @@ Moved names aren't flagged. Missing labels are created; labels are only ever add
   README.md             overview of every run
   <date>-<name>/        one folder per run: spec.md, plan.md, report.md,
                         agent-log.md, ledger.json, pr.md, published.json
+    trace/              the Claude Code transcripts of the run's sessions:
+                        <session>.jsonl, <session>/subagents/agent-*.jsonl
 ```
+
+Open a run's `trace/` in lintcat's run-trace viewer to replay every agent the run started.
 
 `.marrow/` stays out of git unless you share the setup. Builds happen in `.claude/worktrees/marrow-*` on the branch `marrow/<name>`, so your checkout is never touched. Marrow never merges, never pushes anything but its own branches, and never credits an AI in commits or PRs.

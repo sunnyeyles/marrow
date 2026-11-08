@@ -6,7 +6,8 @@
 #   cloud-status.sh <repo> <feature> --wait [hours]  # poll until done (default 8h)
 #
 # When the report is on origin/marrow-run/<feature>, copies the run's output
-# (report.md, agent-log.md, pr.md, ledger.json, result.json, feature.bundle) into
+# (report.md, agent-log.md, pr.md, ledger.json, result.json, feature.bundle,
+# and the trace/ folder of transcripts) into
 # the feature's run folder, refreshes the overview (runs.sh) and prints
 # result.json. Exit 0 done, 3 still
 # running, 1 timed out or failed.
@@ -32,6 +33,13 @@ check() {
   for f in report.md agent-log.md pr.md ledger.json result.json feature.bundle; do
     git -C "$REPO" show "origin/$RUN:$REL/$f" >"$FDIR/$f" 2>/dev/null || rm -f "$FDIR/$f"
   done
+  # trace/ is a folder: unpack its tree over the local one, so a local plan's
+  # session stays beside the build's. Best effort.
+  if git -C "$REPO" cat-file -e "origin/$RUN:$REL/trace" 2>/dev/null; then
+    mkdir -p "$FDIR/trace" &&
+      git -C "$REPO" archive --format=tar "origin/$RUN:$REL/trace" | tar -x -C "$FDIR/trace" 2>/dev/null ||
+      echo "couldn't copy trace/ from $RUN" >&2
+  fi
   cat "$FDIR/result.json"
   return 0
 }
